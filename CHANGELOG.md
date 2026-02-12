@@ -37,3 +37,4 @@
 - `runner-app/executor` 增加统一执行注册表，内置 `shell/http/sql` 通过注册机制接入。
 - `RunResult` 新增报告聚合字段：`batches/retry_distribution/failure_groups`。
 - `runner-cli` JSON 输出同步包含批次统计、重试分布与失败聚合信息。
+- `xtask` 增加工程命令：`fmt/clippy/test/check/ci/build-release`，支持 `--dry-run`。

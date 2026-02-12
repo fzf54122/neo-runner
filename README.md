@@ -85,6 +85,18 @@ bash scripts/install.sh
 neo-runner --help
 ```
 
+仓库任务（xtask）：
+
+```bash
+cargo xtask check
+cargo xtask test
+cargo xtask ci
+cargo xtask build-release
+
+# 仅打印命令，不执行
+cargo xtask --dry-run ci
+```
+
 ## 💻 示例
 
 基础执行（默认 `run`）：
