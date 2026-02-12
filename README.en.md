@@ -114,6 +114,7 @@ GitHub `Release` workflow supports:
 - On `v*` tag pushes, it publishes a stable release.
 - Release assets include `.deb`, Linux raw binary, and Windows `.exe` (with zip/checksums).
 - The Release page groups changes by `feat:` and `fix:` commit prefixes.
+- Executables are compressed with `upx -9` before packaging to reduce artifact size.
 
 ## 💻 Examples
 

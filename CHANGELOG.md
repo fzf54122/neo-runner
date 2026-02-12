@@ -54,3 +54,5 @@
 - Debian 包内置并安装 `bash/zsh/fish` 自动补全脚本，安装后即可直接使用补全能力。
 - `release` 工作流新增自动发布策略：`main` 分支出现 `feat:`/`fix:` 提交时自动预发布，`v*` tag 自动正式发布。
 - `release` 附件扩展为 `.deb`、Linux 原生二进制与 Windows `.exe`（含压缩包与校验文件），Release 页面按 `feat`/`fix` 分类展示变更。
+- `.deb` 打包压缩格式调整为 `gzip`（统一压缩），提升在较老 `dpkg/apt` 环境中的安装兼容性。
+- `release` 打包阶段新增 `upx -9` 二进制压缩（Linux/Windows），减小发布附件体积。

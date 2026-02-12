@@ -79,12 +79,17 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Install UPX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx-ucl || sudo apt-get install -y upx
+
       - name: Build Debian package
         run: cargo run -p xtask -- release
 
       - name: Build Linux binary archive
         run: |
-          cp target/release/neo-runner dist/neo-runner-linux-x86_64
+          cp dist/neo-runner_*_amd64/usr/bin/neo-runner dist/neo-runner-linux-x86_64
           chmod +x dist/neo-runner-linux-x86_64
           tar -czf dist/neo-runner-linux-x86_64.tar.gz -C dist neo-runner-linux-x86_64
           sha256sum dist/neo-runner-linux-x86_64 > dist/neo-runner-linux-x86_64.sha256
@@ -112,8 +117,16 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Install UPX
+        shell: pwsh
+        run: choco install upx -y
+
       - name: Build Windows executable
         run: cargo build -p runner-cli --release
+
+      - name: Compress Windows executable with UPX
+        shell: pwsh
+        run: upx -9 target/release/neo-runner.exe
 
       - name: Package Windows artifacts
         shell: pwsh

@@ -149,6 +149,8 @@ fn run_release(dry_run: bool) -> Result<(), String> {
 
     if dry_run {
         println!("[xtask] dpkg-deb --version");
+        println!("[xtask] upx --version");
+        println!("[xtask] upx -9 target/release/neo-runner");
         println!("[xtask] include completion: bash/zsh/fish");
         println!("[xtask] package: {deb_path}");
         println!("[xtask] checksum: {checksum_path}");
@@ -156,6 +158,8 @@ fn run_release(dry_run: bool) -> Result<(), String> {
     }
 
     run_cmd(dry_run, "dpkg-deb", &["--version"])?;
+    run_cmd(dry_run, "upx", &["--version"])?;
+    run_cmd(dry_run, "upx", &["-9", "target/release/neo-runner"])?;
 
     if dist_dir.exists() {
         fs::remove_dir_all(dist_dir)
@@ -216,6 +220,8 @@ fn run_release(dry_run: bool) -> Result<(), String> {
         dry_run,
         "dpkg-deb",
         &[
+            "--uniform-compression",
+            "-Zgzip",
             "--build",
             package_root
                 .to_str()
