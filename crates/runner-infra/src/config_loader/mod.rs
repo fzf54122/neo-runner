@@ -31,8 +31,18 @@ struct RawTask {
     #[serde(default)]
     depends_on: Vec<String>,
     cmd: Option<String>,
+    method: Option<String>,
+    url: Option<String>,
+    expected_status: Option<RawExpectedStatus>,
     timeout: Option<String>,
     retry: Option<RawRetry>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum RawExpectedStatus {
+    One(u16),
+    Many(Vec<u16>),
 }
 
 #[derive(Debug, Deserialize)]
@@ -114,6 +124,23 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
                 .map(str::trim)
                 .filter(|v| !v.is_empty())
                 .map(ToString::to_string);
+            let method = raw_task
+                .method
+                .as_deref()
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(ToString::to_string);
+            let url = raw_task
+                .url
+                .as_deref()
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(ToString::to_string);
+            let expected_status = match raw_task.expected_status {
+                Some(RawExpectedStatus::One(v)) => Some(vec![v]),
+                Some(RawExpectedStatus::Many(vs)) => Some(vs),
+                None => None,
+            };
 
             if id.is_empty() {
                 return Err("task.id cannot be empty".to_string());
@@ -148,6 +175,9 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
                 id: id.to_string(),
                 task_type: task_type.to_string(), // 存trim后的值
                 cmd,
+                method,
+                url,
+                expected_status,
                 depends_on,
                 timeout_ms,
                 retry,
@@ -463,5 +493,28 @@ job:
 "#;
         let err = load_yaml_str(yaml_task_retry_zero).unwrap_err();
         assert!(err.contains("task retry max attempts"));
+    }
+
+    #[test]
+    fn load_yaml_str_http_fields_parsed() {
+        let yaml = r#"
+version: 1
+job:
+  name: demo
+  tasks:
+    - id: health
+      type: http
+      method: GET
+      url: https://example.com/health
+      expected_status: [200, 204]
+"#;
+
+        let job = load_yaml_str(yaml).expect("should parse http fields");
+        assert_eq!(job.tasks.len(), 1);
+        let t = &job.tasks[0];
+        assert_eq!(t.task_type, "http");
+        assert_eq!(t.method.as_deref(), Some("GET"));
+        assert_eq!(t.url.as_deref(), Some("https://example.com/health"));
+        assert_eq!(t.expected_status.as_ref().map(|v| v.len()), Some(2));
     }
 }

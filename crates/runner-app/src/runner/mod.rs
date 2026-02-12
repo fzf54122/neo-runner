@@ -14,6 +14,9 @@ struct RunnableTask {
     id: String,
     task_type: String,
     cmd: Option<String>,
+    method: Option<String>,
+    url: Option<String>,
+    expected_status: Option<Vec<u16>>,
     timeout_ms: Option<u64>,
     attempts: u32,
 }
@@ -24,6 +27,9 @@ impl RunnableTask {
             id: task.id.clone(),
             task_type: task.task_type.clone(),
             cmd: task.cmd.clone(),
+            method: task.method.clone(),
+            url: task.url.clone(),
+            expected_status: task.expected_status.clone(),
             timeout_ms: task.timeout_ms,
             attempts: resolve_max_attempts(job, task),
         }
@@ -41,6 +47,33 @@ async fn execute_task(task: RunnableTask) -> Result<(), String> {
                 Ok(0) => Ok(()),
                 Ok(code) => Err(format!("task '{}' exited with status {}", task.id, code)),
                 Err(err) => Err(format!("task '{}' failed: {}", task.id, err)),
+            }
+        }
+        "http" => {
+            let method = task
+                .method
+                .as_deref()
+                .ok_or_else(|| format!("task '{}' missing http method", task.id))?;
+            let url = task
+                .url
+                .as_deref()
+                .ok_or_else(|| format!("task '{}' missing http url", task.id))?;
+
+            let status = runner_infra::http::request(method, url)
+                .await
+                .map_err(|err| format!("task '{}' failed: {}", task.id, err))?;
+
+            let accepted: Vec<u16> = task
+                .expected_status
+                .clone()
+                .unwrap_or_else(|| vec![200]);
+            if accepted.contains(&status) {
+                Ok(())
+            } else {
+                Err(format!(
+                    "task '{}' got unexpected status {}, expected {:?}",
+                    task.id, status, accepted
+                ))
             }
         }
         other => Err(format!("unsupported task type: {}", other)),
@@ -211,7 +244,24 @@ mod tests {
             id: id.to_string(),
             task_type: task_type.to_string(),
             cmd: None,
+            method: None,
+            url: None,
+            expected_status: None,
             depends_on: deps.iter().map(|v| v.to_string()).collect(),
+            timeout_ms: None,
+            retry: None,
+        }
+    }
+
+    fn mk_http_task(id: &str, method: &str, url: &str) -> TaskSpec {
+        TaskSpec {
+            id: id.to_string(),
+            task_type: "http".to_string(),
+            cmd: None,
+            method: Some(method.to_string()),
+            url: Some(url.to_string()),
+            expected_status: Some(vec![200]),
+            depends_on: Vec::new(),
             timeout_ms: None,
             retry: None,
         }
@@ -237,5 +287,14 @@ mod tests {
         assert_eq!(result.tasks.len(), 2);
         assert!(result.events.iter().any(|e| e.kind == "run_started"));
         assert!(result.events.iter().any(|e| e.kind == "run_finished"));
+    }
+
+    #[tokio::test]
+    async fn run_job_http_task_success() {
+        let job = mk_job(true, vec![mk_http_task("health", "GET", "https://example.com")]);
+        let result = run_job(&job).await.expect("http task should succeed");
+        assert!(result.success);
+        assert_eq!(result.total, 1);
+        assert_eq!(result.failed, 0);
     }
 }

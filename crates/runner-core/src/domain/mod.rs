@@ -5,6 +5,9 @@ pub struct TaskSpec {
     pub id: String,
     pub task_type: String,
     pub cmd: Option<String>,
+    pub method: Option<String>,
+    pub url: Option<String>,
+    pub expected_status: Option<Vec<u16>>,
     // yaml没写时，自动空数组
     #[serde(default)]
     pub depends_on: Vec<String>,

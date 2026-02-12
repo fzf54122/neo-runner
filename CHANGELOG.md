@@ -21,3 +21,6 @@
 - `runner-cli run --output json` 现可输出任务级报告（任务 id、成功状态、尝试次数、错误信息）。
 - `runner-app` 增加最小事件流（`run_started/task_started/task_finished/run_finished`），并纳入 `RunResult`。
 - `runner-cli` 的 `run --output json` 现包含事件数组，便于后续可观测性接入。
+- `runner-infra/http` 增加 HTTP 请求抽象入口（MVP），并接入 `runner-app` 的 `http` 任务执行路径。
+- `config_loader` 支持解析 `http` 任务字段（`method/url/expected_status`）。
+- 新增 `http` 任务执行单元测试与配置解析测试。
