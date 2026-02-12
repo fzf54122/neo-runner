@@ -75,6 +75,9 @@ fn run_command_json_output() {
     assert_eq!(v["failed"], 0);
     assert_eq!(v["tasks"][0]["id"], "hello");
     assert_eq!(v["tasks"][0]["success"], true);
+    assert_eq!(v["tasks"][0]["exit_code"], 0);
+    assert_eq!(v["tasks"][0]["status_code"], serde_json::Value::Null);
+    assert!(v["tasks"][0]["duration_ms"].as_u64().is_some());
     assert!(v["events"].is_array());
     let kinds: Vec<&str> = v["events"]
         .as_array()

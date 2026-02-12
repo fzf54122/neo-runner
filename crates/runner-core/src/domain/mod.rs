@@ -40,6 +40,9 @@ pub struct TaskRunResult {
     pub success: bool,
     pub attempts: u32,
     pub error: Option<String>,
+    pub duration_ms: u128,
+    pub exit_code: Option<i32>,
+    pub status_code: Option<u16>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -24,3 +24,5 @@
 - `runner-infra/http` 增加 HTTP 请求抽象入口（MVP），并接入 `runner-app` 的 `http` 任务执行路径。
 - `config_loader` 支持解析 `http` 任务字段（`method/url/expected_status`）。
 - 新增 `http` 任务执行单元测试与配置解析测试。
+- `RunResult` 的任务级报告新增 `duration_ms/exit_code/status_code` 字段，便于追踪执行细节。
+- `run --output json` 已输出耗时和状态细节，CLI 集成测试已覆盖关键字段。

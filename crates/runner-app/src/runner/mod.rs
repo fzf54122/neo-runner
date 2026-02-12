@@ -1,5 +1,6 @@
 use crate::scheduler::build_batches;
 use runner_core::domain::{JobSpec, RetrySpec, RunEvent, RunResult, TaskRunResult, TaskSpec};
+use std::time::Instant;
 use tokio::task::JoinSet;
 
 fn resolve_max_attempts(job: &JobSpec, task: &runner_core::domain::TaskSpec) -> u32 {
@@ -21,6 +22,15 @@ struct RunnableTask {
     attempts: u32,
 }
 
+#[derive(Debug, Clone)]
+struct AttemptResult {
+    success: bool,
+    error: Option<String>,
+    duration_ms: u128,
+    exit_code: Option<i32>,
+    status_code: Option<u16>,
+}
+
 impl RunnableTask {
     fn from_task(job: &JobSpec, task: &TaskSpec) -> Self {
         Self {
@@ -36,77 +46,156 @@ impl RunnableTask {
     }
 }
 
-async fn execute_task(task: RunnableTask) -> Result<(), String> {
+async fn execute_task(task: RunnableTask) -> AttemptResult {
+    let started = Instant::now();
+
     match task.task_type.as_str() {
         "shell" => {
             let cmd = task
                 .cmd
-                .as_deref()
-                .ok_or_else(|| format!("task '{}' missing shell cmd", task.id))?;
+                .as_deref();
+
+            let Some(cmd) = cmd else {
+                return AttemptResult {
+                    success: false,
+                    error: Some(format!("task '{}' missing shell cmd", task.id)),
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: None,
+                };
+            };
+
             match runner_infra::process::run_shell(cmd, task.timeout_ms).await {
-                Ok(0) => Ok(()),
-                Ok(code) => Err(format!("task '{}' exited with status {}", task.id, code)),
-                Err(err) => Err(format!("task '{}' failed: {}", task.id, err)),
+                Ok(0) => AttemptResult {
+                    success: true,
+                    error: None,
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: Some(0),
+                    status_code: None,
+                },
+                Ok(code) => AttemptResult {
+                    success: false,
+                    error: Some(format!("task '{}' exited with status {}", task.id, code)),
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: Some(code),
+                    status_code: None,
+                },
+                Err(err) => AttemptResult {
+                    success: false,
+                    error: Some(format!("task '{}' failed: {}", task.id, err)),
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: None,
+                },
             }
         }
         "http" => {
-            let method = task
-                .method
-                .as_deref()
-                .ok_or_else(|| format!("task '{}' missing http method", task.id))?;
-            let url = task
-                .url
-                .as_deref()
-                .ok_or_else(|| format!("task '{}' missing http url", task.id))?;
+            let Some(method) = task.method.as_deref() else {
+                return AttemptResult {
+                    success: false,
+                    error: Some(format!("task '{}' missing http method", task.id)),
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: None,
+                };
+            };
 
-            let status = runner_infra::http::request(method, url)
-                .await
-                .map_err(|err| format!("task '{}' failed: {}", task.id, err))?;
+            let Some(url) = task.url.as_deref() else {
+                return AttemptResult {
+                    success: false,
+                    error: Some(format!("task '{}' missing http url", task.id)),
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: None,
+                };
+            };
+
+            let status = match runner_infra::http::request(method, url).await {
+                Ok(status) => status,
+                Err(err) => {
+                    return AttemptResult {
+                        success: false,
+                        error: Some(format!("task '{}' failed: {}", task.id, err)),
+                        duration_ms: started.elapsed().as_millis(),
+                        exit_code: None,
+                        status_code: None,
+                    };
+                }
+            };
 
             let accepted: Vec<u16> = task
                 .expected_status
                 .clone()
                 .unwrap_or_else(|| vec![200]);
             if accepted.contains(&status) {
-                Ok(())
+                AttemptResult {
+                    success: true,
+                    error: None,
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: Some(status),
+                }
             } else {
-                Err(format!(
-                    "task '{}' got unexpected status {}, expected {:?}",
-                    task.id, status, accepted
-                ))
+                AttemptResult {
+                    success: false,
+                    error: Some(format!(
+                        "task '{}' got unexpected status {}, expected {:?}",
+                        task.id, status, accepted
+                    )),
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: Some(status),
+                }
             }
         }
-        other => Err(format!("unsupported task type: {}", other)),
+        other => AttemptResult {
+            success: false,
+            error: Some(format!("unsupported task type: {}", other)),
+            duration_ms: started.elapsed().as_millis(),
+            exit_code: None,
+            status_code: None,
+        },
     }
 }
 
 async fn execute_task_with_retry(task: RunnableTask) -> TaskRunResult {
-    let mut last_error: Option<String> = None;
+    let mut last: Option<AttemptResult> = None;
     for attempt in 1..=task.attempts {
         let once = RunnableTask {
             attempts: 1,
             ..task.clone()
         };
-        match execute_task(once).await {
-            Ok(()) => {
-                return TaskRunResult {
-                    id: task.id,
-                    success: true,
-                    attempts: attempt,
-                    error: None,
-                };
-            }
-            Err(err) => {
-                last_error = Some(err);
-            }
+        let result = execute_task(once).await;
+        if result.success {
+            return TaskRunResult {
+                id: task.id,
+                success: true,
+                attempts: attempt,
+                error: None,
+                duration_ms: result.duration_ms,
+                exit_code: result.exit_code,
+                status_code: result.status_code,
+            };
         }
+        last = Some(result);
     }
+
+    let fallback = last.unwrap_or(AttemptResult {
+        success: false,
+        error: Some("task failed without attempt result".to_string()),
+        duration_ms: 0,
+        exit_code: None,
+        status_code: None,
+    });
 
     TaskRunResult {
         id: task.id,
         success: false,
         attempts: task.attempts,
-        error: last_error,
+        error: fallback.error,
+        duration_ms: fallback.duration_ms,
+        exit_code: fallback.exit_code,
+        status_code: fallback.status_code,
     }
 }
 
@@ -131,6 +220,9 @@ async fn execute_batch(tasks: Vec<RunnableTask>, max_concurrency: usize) -> Vec<
                     success: false,
                     attempts: 1,
                     error: Some(format!("task join error: {}", err)),
+                    duration_ms: 0,
+                    exit_code: None,
+                    status_code: None,
                 }),
             }
         }
@@ -285,6 +377,7 @@ mod tests {
         assert_eq!(result.total, 2);
         assert_eq!(result.failed, 2);
         assert_eq!(result.tasks.len(), 2);
+        assert!(result.tasks.iter().all(|t| t.duration_ms <= 1_000));
         assert!(result.events.iter().any(|e| e.kind == "run_started"));
         assert!(result.events.iter().any(|e| e.kind == "run_finished"));
     }
@@ -296,5 +389,6 @@ mod tests {
         assert!(result.success);
         assert_eq!(result.total, 1);
         assert_eq!(result.failed, 0);
+        assert_eq!(result.tasks[0].status_code, Some(200));
     }
 }
