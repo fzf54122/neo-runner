@@ -29,7 +29,7 @@ cargo test --workspace
 - 已打通主流程：`load -> plan -> execute -> report`
 - 支持任务依赖拓扑排序（含循环依赖检测）
 - 调度已支持按依赖层分批执行（batch）
-- 支持 `type: shell` 与 `type: http` 任务执行（http 为 MVP）
+- 支持 `type: shell` / `type: http` / `type: sql` 任务执行（http/sql 为 MVP）
 - 支持超时与重试参数解析（`default_timeout`/`timeout`、`default_retry`/`retry`）
 - 执行阶段已接入 `max_concurrency` 并发上限与 `fail_fast` 行为控制
 - CLI 已支持子命令：`run` / `plan` / `validate`
@@ -58,6 +58,9 @@ cargo run --bin runner-cli -- run -f examples/demo.yaml --output json
 
 # HTTP 任务示例
 cargo run --bin runner-cli -- run -f examples/demo-http.yaml --output json
+
+# SQL 批量导入示例
+cargo run --bin runner-cli -- run -f examples/demo-sql.yaml --output json
 ```
 
 查看命令参数：

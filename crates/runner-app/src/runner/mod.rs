@@ -18,6 +18,9 @@ struct RunnableTask {
     method: Option<String>,
     url: Option<String>,
     expected_status: Option<Vec<u16>>,
+    dsn: Option<String>,
+    query: Option<String>,
+    sql_file: Option<String>,
     timeout_ms: Option<u64>,
     attempts: u32,
 }
@@ -40,6 +43,9 @@ impl RunnableTask {
             method: task.method.clone(),
             url: task.url.clone(),
             expected_status: task.expected_status.clone(),
+            dsn: task.dsn.clone(),
+            query: task.query.clone(),
+            sql_file: task.sql_file.clone(),
             timeout_ms: task.timeout_ms,
             attempts: resolve_max_attempts(job, task),
         }
@@ -146,6 +152,40 @@ async fn execute_task(task: RunnableTask) -> AttemptResult {
                     exit_code: None,
                     status_code: Some(status),
                 }
+            }
+        }
+        "sql" => {
+            let Some(dsn) = task.dsn.as_deref() else {
+                return AttemptResult {
+                    success: false,
+                    error: Some(format!("task '{}' missing sql dsn", task.id)),
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: None,
+                };
+            };
+
+            match runner_infra::sql::execute_batch(
+                dsn,
+                task.query.as_deref(),
+                task.sql_file.as_deref(),
+            )
+            .await
+            {
+                Ok(()) => AttemptResult {
+                    success: true,
+                    error: None,
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: None,
+                },
+                Err(err) => AttemptResult {
+                    success: false,
+                    error: Some(format!("task '{}' failed: {}", task.id, err)),
+                    duration_ms: started.elapsed().as_millis(),
+                    exit_code: None,
+                    status_code: None,
+                },
             }
         }
         other => AttemptResult {
@@ -339,6 +379,9 @@ mod tests {
             method: None,
             url: None,
             expected_status: None,
+            dsn: None,
+            query: None,
+            sql_file: None,
             depends_on: deps.iter().map(|v| v.to_string()).collect(),
             timeout_ms: None,
             retry: None,
@@ -353,6 +396,26 @@ mod tests {
             method: Some(method.to_string()),
             url: Some(url.to_string()),
             expected_status: Some(vec![200]),
+            dsn: None,
+            query: None,
+            sql_file: None,
+            depends_on: Vec::new(),
+            timeout_ms: None,
+            retry: None,
+        }
+    }
+
+    fn mk_sql_task(id: &str, dsn: &str, query: &str) -> TaskSpec {
+        TaskSpec {
+            id: id.to_string(),
+            task_type: "sql".to_string(),
+            cmd: None,
+            method: None,
+            url: None,
+            expected_status: None,
+            dsn: Some(dsn.to_string()),
+            query: Some(query.to_string()),
+            sql_file: None,
             depends_on: Vec::new(),
             timeout_ms: None,
             retry: None,
@@ -390,5 +453,21 @@ mod tests {
         assert_eq!(result.total, 1);
         assert_eq!(result.failed, 0);
         assert_eq!(result.tasks[0].status_code, Some(200));
+    }
+
+    #[tokio::test]
+    async fn run_job_sql_task_success() {
+        let job = mk_job(
+            true,
+            vec![mk_sql_task(
+                "import",
+                "sqlite::memory:",
+                "CREATE TABLE IF NOT EXISTS users(id INTEGER); INSERT INTO users(id) VALUES (1);",
+            )],
+        );
+        let result = run_job(&job).await.expect("sql task should succeed");
+        assert!(result.success);
+        assert_eq!(result.total, 1);
+        assert_eq!(result.failed, 0);
     }
 }

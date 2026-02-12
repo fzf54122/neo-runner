@@ -8,6 +8,9 @@ pub struct TaskSpec {
     pub method: Option<String>,
     pub url: Option<String>,
     pub expected_status: Option<Vec<u16>>,
+    pub dsn: Option<String>,
+    pub query: Option<String>,
+    pub sql_file: Option<String>,
     // yaml没写时，自动空数组
     #[serde(default)]
     pub depends_on: Vec<String>,

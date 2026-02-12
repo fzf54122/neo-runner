@@ -26,3 +26,7 @@
 - 新增 `http` 任务执行单元测试与配置解析测试。
 - `RunResult` 的任务级报告新增 `duration_ms/exit_code/status_code` 字段，便于追踪执行细节。
 - `run --output json` 已输出耗时和状态细节，CLI 集成测试已覆盖关键字段。
+- `runner-infra/sql` 增加 SQLite 批量执行能力（支持 `query` 与 `sql_file`）。
+- `runner-app` 接入 `type: sql` 任务执行链路，可用于批量导入场景。
+- `config_loader` 增加 SQL 字段解析（`dsn/query/sql_file`）与对应测试。
+- 增加 SQL 示例配置与批处理脚本（`examples/demo-sql.yaml`、`examples/demo-batch.sql`）。

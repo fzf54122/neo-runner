@@ -2,3 +2,4 @@
 /.idea/
 /.vscode/
 *.swp
+examples/*.db

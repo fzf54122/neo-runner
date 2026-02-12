@@ -9,3 +9,5 @@ runner-core = { path = "../runner-core" }
 serde.workspace = true
 serde_yaml.workspace = true
 tokio.workspace = true
+reqwest.workspace = true
+rusqlite.workspace = true

@@ -1,0 +1,8 @@
+version: 1
+job:
+  name: demo-sql
+  tasks:
+    - id: import-users
+      type: sql
+      dsn: sqlite://demo.db
+      sql_file: demo-batch.sql

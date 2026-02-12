@@ -2,6 +2,7 @@ use runner_core::domain::{JobSpec, RetrySpec, TaskSpec};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::fs;
+use std::path::{Path, PathBuf};
 
 const CONFIG_VERSION: u32 = 1;
 
@@ -34,6 +35,9 @@ struct RawTask {
     method: Option<String>,
     url: Option<String>,
     expected_status: Option<RawExpectedStatus>,
+    dsn: Option<String>,
+    query: Option<String>,
+    sql_file: Option<String>,
     timeout: Option<String>,
     retry: Option<RawRetry>,
 }
@@ -54,7 +58,32 @@ pub fn load_yaml(path: &str) -> Result<JobSpec, String> {
     let content = fs::read_to_string(path)
         // 把底层错误转换函数要求的string
         .map_err(|e| format!("read file failed: {}", e))?;
-    load_yaml_str(&content)
+    let mut job = load_yaml_str(&content)?;
+    let base_dir = Path::new(path)
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."));
+
+    for task in &mut job.tasks {
+        if let Some(sql_file) = &task.sql_file {
+            if Path::new(sql_file).is_relative() {
+                let resolved = base_dir.join(sql_file);
+                task.sql_file = Some(resolved.to_string_lossy().to_string());
+            }
+        }
+
+        if let Some(dsn) = &task.dsn {
+            if let Some(path_part) = dsn.strip_prefix("sqlite://") {
+                let path_obj = Path::new(path_part);
+                if path_obj.is_relative() && !path_part.is_empty() {
+                    let resolved = base_dir.join(path_obj);
+                    task.dsn = Some(format!("sqlite://{}", resolved.to_string_lossy()));
+                }
+            }
+        }
+    }
+
+    Ok(job)
 }
 
 // 纯解析/校验层
@@ -141,6 +170,24 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
                 Some(RawExpectedStatus::Many(vs)) => Some(vs),
                 None => None,
             };
+            let dsn = raw_task
+                .dsn
+                .as_deref()
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(ToString::to_string);
+            let query = raw_task
+                .query
+                .as_deref()
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(ToString::to_string);
+            let sql_file = raw_task
+                .sql_file
+                .as_deref()
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(ToString::to_string);
 
             if id.is_empty() {
                 return Err("task.id cannot be empty".to_string());
@@ -178,6 +225,9 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
                 method,
                 url,
                 expected_status,
+                dsn,
+                query,
+                sql_file,
                 depends_on,
                 timeout_ms,
                 retry,
@@ -516,5 +566,25 @@ job:
         assert_eq!(t.method.as_deref(), Some("GET"));
         assert_eq!(t.url.as_deref(), Some("https://example.com/health"));
         assert_eq!(t.expected_status.as_ref().map(|v| v.len()), Some(2));
+    }
+
+    #[test]
+    fn load_yaml_str_sql_fields_parsed() {
+        let yaml = r#"
+version: 1
+job:
+  name: demo
+  tasks:
+    - id: import
+      type: sql
+      dsn: "sqlite::memory:"
+      query: CREATE TABLE t(id INTEGER);
+"#;
+
+        let job = load_yaml_str(yaml).expect("should parse sql fields");
+        let t = &job.tasks[0];
+        assert_eq!(t.task_type, "sql");
+        assert_eq!(t.dsn.as_deref(), Some("sqlite::memory:"));
+        assert_eq!(t.query.as_deref(), Some("CREATE TABLE t(id INTEGER);"));
     }
 }
