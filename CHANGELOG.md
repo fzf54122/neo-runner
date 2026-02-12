@@ -30,3 +30,4 @@
 - `runner-app` 接入 `type: sql` 任务执行链路，可用于批量导入场景。
 - `config_loader` 增加 SQL 字段解析（`dsn/query/sql_file`）与对应测试。
 - 增加 SQL 示例配置与批处理脚本（`examples/demo-sql.yaml`、`examples/demo-batch.sql`）。
+- CLI 二进制统一为 `neo-runner`（支持 `cargo run --bin neo-runner` 与 `cargo install --bin neo-runner`）。

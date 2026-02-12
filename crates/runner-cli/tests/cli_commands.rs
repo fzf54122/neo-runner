@@ -13,7 +13,7 @@ fn demo_sql_config_path() -> String {
 
 #[test]
 fn validate_command_works() {
-    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
         .args(["validate", "-f", &demo_config_path()])
         .output()
         .expect("failed to execute runner-cli validate");
@@ -25,7 +25,7 @@ fn validate_command_works() {
 
 #[test]
 fn plan_command_works() {
-    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
         .args(["plan", "-f", &demo_config_path()])
         .output()
         .expect("failed to execute runner-cli plan");
@@ -37,7 +37,7 @@ fn plan_command_works() {
 
 #[test]
 fn validate_command_json_output() {
-    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
         .args(["validate", "-f", &demo_config_path(), "--output", "json"])
         .output()
         .expect("failed to execute runner-cli validate json");
@@ -51,7 +51,7 @@ fn validate_command_json_output() {
 
 #[test]
 fn plan_command_json_output() {
-    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
         .args(["plan", "-f", &demo_config_path(), "--output", "json"])
         .output()
         .expect("failed to execute runner-cli plan json");
@@ -64,7 +64,7 @@ fn plan_command_json_output() {
 
 #[test]
 fn run_command_json_output() {
-    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
         .args(["run", "-f", &demo_config_path(), "--output", "json"])
         .output()
         .expect("failed to execute runner-cli run json");
@@ -98,7 +98,7 @@ fn run_command_json_output() {
 
 #[test]
 fn run_sql_command_json_output() {
-    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
         .args(["run", "-f", &demo_sql_config_path(), "--output", "json"])
         .output()
         .expect("failed to execute runner-cli run sql json");

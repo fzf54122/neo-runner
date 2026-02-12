@@ -3,6 +3,11 @@ name = "runner-cli"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
+autobins = false
+
+[[bin]]
+name = "neo-runner"
+path = "src/main.rs"
 
 [dependencies]
 clap.workspace = true

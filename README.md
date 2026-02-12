@@ -41,32 +41,32 @@ cargo test --workspace
 ## 💻 运行示例
 
 ```bash
-cargo run --bin runner-cli -- -f examples/demo.yaml
+cargo run --bin neo-runner -- -f examples/demo.yaml
 ```
 
 或使用子命令：
 
 ```bash
-cargo run --bin runner-cli -- validate -f examples/demo.yaml
-cargo run --bin runner-cli -- plan -f examples/demo.yaml
-cargo run --bin runner-cli -- run -f examples/demo.yaml
+cargo run --bin neo-runner -- validate -f examples/demo.yaml
+cargo run --bin neo-runner -- plan -f examples/demo.yaml
+cargo run --bin neo-runner -- run -f examples/demo.yaml
 
 # JSON 输出（便于脚本/CI 消费）
-cargo run --bin runner-cli -- validate -f examples/demo.yaml --output json
-cargo run --bin runner-cli -- plan -f examples/demo.yaml --output json
-cargo run --bin runner-cli -- run -f examples/demo.yaml --output json
+cargo run --bin neo-runner -- validate -f examples/demo.yaml --output json
+cargo run --bin neo-runner -- plan -f examples/demo.yaml --output json
+cargo run --bin neo-runner -- run -f examples/demo.yaml --output json
 
 # HTTP 任务示例
-cargo run --bin runner-cli -- run -f examples/demo-http.yaml --output json
+cargo run --bin neo-runner -- run -f examples/demo-http.yaml --output json
 
 # SQL 批量导入示例
-cargo run --bin runner-cli -- run -f examples/demo-sql.yaml --output json
+cargo run --bin neo-runner -- run -f examples/demo-sql.yaml --output json
 ```
 
 查看命令参数：
 
 ```bash
-cargo run --bin runner-cli -- --help
+cargo run --bin neo-runner -- --help
 ```
 
 ## 📚 文档索引
