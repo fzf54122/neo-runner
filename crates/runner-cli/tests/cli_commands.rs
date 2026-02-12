@@ -27,3 +27,30 @@ fn plan_command_works() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("hello"));
 }
+
+#[test]
+fn validate_command_json_output() {
+    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+        .args(["validate", "-f", &demo_config_path(), "--output", "json"])
+        .output()
+        .expect("failed to execute runner-cli validate json");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("stdout should be json");
+    assert_eq!(v["valid"], true);
+    assert_eq!(v["tasks"], 1);
+}
+
+#[test]
+fn plan_command_json_output() {
+    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+        .args(["plan", "-f", &demo_config_path(), "--output", "json"])
+        .output()
+        .expect("failed to execute runner-cli plan json");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("stdout should be json");
+    assert_eq!(v["tasks"][0], "hello");
+}

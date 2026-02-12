@@ -15,3 +15,5 @@
 - `runner-app/scheduler` 增加分层批次计划（batch）输出，支持后续并发执行扩展。
 - `runner-app/runner` 执行阶段接入 `max_concurrency` 并发限制，按批次并发执行任务。
 - 新增 `runner-app/runner` 失败策略测试（`fail_fast=true/false`）与批次调度测试。
+- `runner-cli` 增加 `--output text|json` 输出模式，`plan/validate` 支持结构化 JSON 输出。
+- 新增 CLI JSON 输出集成测试，保障自动化场景稳定性。

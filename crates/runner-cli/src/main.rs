@@ -20,6 +20,7 @@ async fn main() {
     let file = args
         .file
         .unwrap_or_else(|| "examples/demo.yaml".to_string());
+    let output_format = args.output;
 
     if args.version {
         println!("neo-runner 0.1.0");
@@ -29,7 +30,7 @@ async fn main() {
     match args.command.unwrap_or(cli::Command::Run) {
         cli::Command::Validate => {
             let job = load_job_or_exit(&file);
-            output::print_validate_ok(job.tasks.len());
+            output::print_validate_ok(job.tasks.len(), output_format);
         }
         cli::Command::Plan => {
             let job = load_job_or_exit(&file);
@@ -41,13 +42,13 @@ async fn main() {
                 }
             };
             let ids: Vec<String> = plan.iter().map(|t| t.id.clone()).collect();
-            output::print_plan(&ids);
+            output::print_plan(&ids, output_format);
         }
         cli::Command::Run => {
             let job = load_job_or_exit(&file);
             match runner_app::runner::run_job(&job).await {
                 Ok(result) => {
-                    output::print_result(result.success, result.total);
+                    output::print_result(result.success, result.total, output_format);
                 }
                 Err(err) => {
                     eprintln!("run failed: {err}");

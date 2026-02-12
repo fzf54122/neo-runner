@@ -9,4 +9,5 @@ clap.workspace = true
 runner-app = { path = "../runner-app" }
 runner-core = { path = "../runner-core" }
 runner-infra = { path = "../runner-infra" }
+serde_json.workspace = true
 tokio.workspace = true
