@@ -2,6 +2,7 @@ mod cli;
 mod output;
 
 use clap::Parser;
+use std::process;
 
 #[tokio::main]
 async fn main() {
@@ -11,6 +12,21 @@ async fn main() {
         return;
     }
 
-    let result = runner_app::runner::run().await;
-    output::print_result(result.success, result.total);
+    let job = match runner_infra::config_loader::load_yaml(&args.file) {
+        Ok(job) => job,
+        Err(err) => {
+            eprintln!("load config failed: {err}");
+            process::exit(2);
+        }
+    };
+
+    match runner_app::runner::run_job(&job).await {
+        Ok(result) => {
+            output::print_result(result.success, result.total);
+        }
+        Err(err) => {
+            eprintln!("run failed: {err}");
+            process::exit(1);
+        }
+    }
 }

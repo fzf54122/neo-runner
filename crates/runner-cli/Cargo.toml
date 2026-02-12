@@ -7,4 +7,5 @@ license.workspace = true
 [dependencies]
 clap.workspace = true
 runner-app = { path = "../runner-app" }
+runner-infra = { path = "../runner-infra" }
 tokio.workspace = true

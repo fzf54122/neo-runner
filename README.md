@@ -24,6 +24,25 @@ cargo check --workspace
 cargo test --workspace
 ```
 
+## 🏃 当前可运行能力
+
+- 已打通主流程：`load -> plan -> execute -> report`
+- 支持任务依赖拓扑排序（含循环依赖检测）
+- 支持 `type: shell` 任务执行
+- 支持超时与重试参数解析（`default_timeout`/`timeout`、`default_retry`/`retry`）
+
+## 💻 运行示例
+
+```bash
+cargo run --bin runner-cli -- -f examples/demo.yaml
+```
+
+查看命令参数：
+
+```bash
+cargo run --bin runner-cli -- --help
+```
+
 ## 📚 文档索引
 
 - 架构说明：`docs/architecture.md`
