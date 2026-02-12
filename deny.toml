@@ -1,0 +1,7 @@
+[graph]
+all-features = true
+
+[advisories]
+unmaintained = "warn"
+yanked = "deny"
+ignore = []

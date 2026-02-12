@@ -1,0 +1,10 @@
+[package]
+name = "runner-cli"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+clap.workspace = true
+runner-app = { path = "../runner-app" }
+tokio.workspace = true

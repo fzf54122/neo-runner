@@ -1,0 +1,8 @@
+[package]
+name = "runner-plugins"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+runner-core = { path = "../runner-core" }

@@ -1,0 +1,9 @@
+version: 1
+job:
+  name: demo-matrix
+  matrix:
+    os: [linux, macos]
+  tasks:
+    - id: print
+      type: shell
+      cmd: "echo running on ${os}"

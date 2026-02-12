@@ -1,0 +1,8 @@
+version: 1
+job:
+  name: demo-http
+  tasks:
+    - id: ping
+      type: http
+      method: GET
+      url: "https://example.com"

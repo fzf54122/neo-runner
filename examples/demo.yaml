@@ -1,0 +1,7 @@
+version: 1
+job:
+  name: demo
+  tasks:
+    - id: hello
+      type: shell
+      cmd: "echo hello neo-runner"

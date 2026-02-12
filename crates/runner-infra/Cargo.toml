@@ -1,0 +1,11 @@
+[package]
+name = "runner-infra"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+runner-core = { path = "../runner-core" }
+serde.workspace = true
+serde_yaml.workspace = true
+tokio.workspace = true

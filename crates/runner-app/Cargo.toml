@@ -1,0 +1,12 @@
+[package]
+name = "runner-app"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+runner-core = { path = "../runner-core" }
+runner-infra = { path = "../runner-infra" }
+runner-plugins = { path = "../runner-plugins" }
+tokio.workspace = true
+tracing.workspace = true
