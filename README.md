@@ -1,72 +1,92 @@
-# neo-runner
+# 🚀 neo-runner
 
-中文 | [English](README.en.md)
+<div align="center">
 
-`neo-runner` 是一个基于 Rust Workspace 的可扩展任务执行框架，面向“配置驱动、分层架构、插件扩展”的工程场景。📘
+**一个面向生产场景的 Rust 任务编排器：配置驱动、分层架构、默认可靠。**
 
-## ✨ 项目定位
+**简体中文** | [English](README.en.md)
 
-本项目用于构建统一的任务运行平台，支持从配置加载到调度执行、结果汇报的完整链路，核心目标是：稳定、可测、可演进。
+[![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org/)
+[![Workspace](https://img.shields.io/badge/Cargo-Workspace-blue.svg)](Cargo.toml)
+[![CLI](https://img.shields.io/badge/Binary-neo--runner-green.svg)](crates/runner-cli)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 🧱 Workspace 结构
+[⚡ 快速开始](#-快速开始) • [✨ 核心能力](#-核心能力) • [💻 运行示例](#-运行示例) • [📚 文档索引](#-文档索引)
 
-- `runner-cli`：命令行入口，负责参数解析与输出展示。
-- `runner-core`：核心领域模型、策略、指标与统一错误。
-- `runner-app`：应用编排层（`load -> plan -> execute -> report`）。
-- `runner-infra`：基础设施适配（配置/进程/HTTP/文件/时间）。
-- `runner-plugins`：内置插件集合（`shell/http/sql`）。
-- `xtask`：仓库工程任务（格式化、检查、发布辅助等）。
+</div>
 
-## 🚀 快速开始
+## 🌟 为什么是 neo-runner？
+
+在自动化任务系统里，最常见的问题不是“能不能跑”，而是“**是否稳定可控地跑**”。`neo-runner` 聚焦三个目标：
+
+- **配置驱动**：统一 YAML 协议，降低脚本散落和心智负担。
+- **默认可靠**：内置依赖排序、重试、超时、并发控制和 fail-fast。
+- **工程友好**：结构化 JSON 报告 + 最小事件流，便于 CI/观测系统接入。
+
+## 🧱 架构分层
+
+- `runner-cli`：命令入口与输出格式化（text/json）。
+- `runner-core`：领域模型与执行结果结构。
+- `runner-app`：主流程编排（`load -> plan -> execute -> report`）。
+- `runner-infra`：配置加载、进程执行、HTTP、SQL 等基础设施适配。
+- `runner-plugins`：插件扩展目录（当前以内置任务类型为主）。
+
+## ✨ 核心能力
+
+- 支持任务类型：`shell` / `http` / `sql`（`http/sql` 为 MVP）。
+- 支持 DAG 依赖拓扑排序与分层批次（batch）调度。
+- 支持批次内并发（`max_concurrency`）与失败策略（`fail_fast`）。
+- 支持超时与重试策略（`default_timeout`/`timeout`，`default_retry`/`retry`）。
+- 支持结构化 JSON 报告（任务级状态、耗时、状态码、事件流）。
+- 支持最小事件流：`run_started` / `task_started` / `task_finished` / `run_finished`。
+
+## ⚡ 快速开始
 
 ```bash
 cargo check --workspace
 cargo test --workspace
 ```
 
-## 🏃 当前可运行能力
+查看 CLI 帮助：
 
-- 已打通主流程：`load -> plan -> execute -> report`
-- 支持任务依赖拓扑排序（含循环依赖检测）
-- 调度已支持按依赖层分批执行（batch）
-- 支持 `type: shell` / `type: http` / `type: sql` 任务执行（http/sql 为 MVP）
-- 支持超时与重试参数解析（`default_timeout`/`timeout`、`default_retry`/`retry`）
-- 执行阶段已接入 `max_concurrency` 并发上限与 `fail_fast` 行为控制
-- CLI 已支持子命令：`run` / `plan` / `validate`
-- CLI 已支持输出格式：`--output text|json`（当前 `plan/validate` 完整支持 JSON）
-- CLI `run` 现已支持 JSON 报告（含任务级执行结果）
-- 已增加最小事件流（`run_started/task_started/task_finished/run_finished`）并随 `run --output json` 输出
-- `run` JSON 报告已包含任务耗时与结果码（`duration_ms`、`exit_code`、`status_code`）
+```bash
+cargo run --bin neo-runner -- --help
+```
 
 ## 💻 运行示例
+
+基础执行（等价于 `run`）：
 
 ```bash
 cargo run --bin neo-runner -- -f examples/demo.yaml
 ```
 
-或使用子命令：
+显式子命令：
 
 ```bash
 cargo run --bin neo-runner -- validate -f examples/demo.yaml
 cargo run --bin neo-runner -- plan -f examples/demo.yaml
 cargo run --bin neo-runner -- run -f examples/demo.yaml
+```
 
-# JSON 输出（便于脚本/CI 消费）
+JSON 输出（适合 CI/脚本消费）：
+
+```bash
 cargo run --bin neo-runner -- validate -f examples/demo.yaml --output json
 cargo run --bin neo-runner -- plan -f examples/demo.yaml --output json
 cargo run --bin neo-runner -- run -f examples/demo.yaml --output json
-
-# HTTP 任务示例
-cargo run --bin neo-runner -- run -f examples/demo-http.yaml --output json
-
-# SQL 批量导入示例
-cargo run --bin neo-runner -- run -f examples/demo-sql.yaml --output json
 ```
 
-查看命令参数：
+HTTP 并发场景示例：
 
 ```bash
-cargo run --bin neo-runner -- --help
+cargo run --bin neo-runner -- run -f examples/demo-http.yaml --output json
+```
+
+SQL 批量导入场景示例：
+
+```bash
+cargo run --bin neo-runner -- run -f examples/demo-sql.yaml --output json
 ```
 
 ## 📚 文档索引
@@ -76,7 +96,11 @@ cargo run --bin neo-runner -- --help
 - 插件规范：`docs/plugin-spec.md`
 - 路线图：`docs/roadmap.md`
 
-## 🔐 安全与变更
+## 🔐 安全与版本
 
 - 安全策略：`SECURITY.md`
 - 变更日志：`CHANGELOG.md`
+
+---
+
+> 如果你希望快速落地到生产，建议先从 `examples/demo.yaml` 与 `examples/demo-http.yaml` 开始，确认环境和配置规范后再接入你的业务任务。✨

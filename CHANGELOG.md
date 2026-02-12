@@ -31,3 +31,5 @@
 - `config_loader` 增加 SQL 字段解析（`dsn/query/sql_file`）与对应测试。
 - 增加 SQL 示例配置与批处理脚本（`examples/demo-sql.yaml`、`examples/demo-batch.sql`）。
 - CLI 二进制统一为 `neo-runner`（支持 `cargo run --bin neo-runner` 与 `cargo install --bin neo-runner`）。
+- 重写 `README.md` 为更聚焦的工程化风格，强调能力矩阵与上手路径。
+- 新增博客草稿：`2026-02-12-neo-runner.md`（参考 relihttp 文风）。
