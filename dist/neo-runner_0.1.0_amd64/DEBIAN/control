@@ -1,0 +1,7 @@
+Package: neo-runner
+Version: 0.1.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: neo-runner contributors
+Description: A production-oriented Rust task orchestrator

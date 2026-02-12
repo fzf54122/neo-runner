@@ -1,0 +1,183 @@
+#compdef neo-runner
+
+autoload -U is-at-least
+
+_neo-runner() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-f+[]:FILE:_default' \
+'--file=[]:FILE:_default' \
+'--output=[]:OUTPUT:(text json)' \
+'--version[]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_neo-runner_commands" \
+"*::: :->neo-runner" \
+&& ret=0
+    case $state in
+    (neo-runner)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:neo-runner-command-$line[1]:"
+        case $line[1] in
+            (run)
+_arguments "${_arguments_options[@]}" : \
+'-f+[]:FILE:_default' \
+'--file=[]:FILE:_default' \
+'--output=[]:OUTPUT:(text json)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(plan)
+_arguments "${_arguments_options[@]}" : \
+'-f+[]:FILE:_default' \
+'--file=[]:FILE:_default' \
+'--output=[]:OUTPUT:(text json)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(validate)
+_arguments "${_arguments_options[@]}" : \
+'-f+[]:FILE:_default' \
+'--file=[]:FILE:_default' \
+'--output=[]:OUTPUT:(text json)' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(completion)
+_arguments "${_arguments_options[@]}" : \
+'-f+[]:FILE:_default' \
+'--file=[]:FILE:_default' \
+'--output=[]:OUTPUT:(text json)' \
+'-h[Print help]' \
+'--help[Print help]' \
+':shell:(bash zsh fish power-shell elvish)' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_neo-runner__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:neo-runner-help-command-$line[1]:"
+        case $line[1] in
+            (run)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(plan)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(validate)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(completion)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_neo-runner_commands] )) ||
+_neo-runner_commands() {
+    local commands; commands=(
+'run:' \
+'plan:' \
+'validate:' \
+'completion:' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'neo-runner commands' commands "$@"
+}
+(( $+functions[_neo-runner__completion_commands] )) ||
+_neo-runner__completion_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner completion commands' commands "$@"
+}
+(( $+functions[_neo-runner__help_commands] )) ||
+_neo-runner__help_commands() {
+    local commands; commands=(
+'run:' \
+'plan:' \
+'validate:' \
+'completion:' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'neo-runner help commands' commands "$@"
+}
+(( $+functions[_neo-runner__help__completion_commands] )) ||
+_neo-runner__help__completion_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner help completion commands' commands "$@"
+}
+(( $+functions[_neo-runner__help__help_commands] )) ||
+_neo-runner__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner help help commands' commands "$@"
+}
+(( $+functions[_neo-runner__help__plan_commands] )) ||
+_neo-runner__help__plan_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner help plan commands' commands "$@"
+}
+(( $+functions[_neo-runner__help__run_commands] )) ||
+_neo-runner__help__run_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner help run commands' commands "$@"
+}
+(( $+functions[_neo-runner__help__validate_commands] )) ||
+_neo-runner__help__validate_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner help validate commands' commands "$@"
+}
+(( $+functions[_neo-runner__plan_commands] )) ||
+_neo-runner__plan_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner plan commands' commands "$@"
+}
+(( $+functions[_neo-runner__run_commands] )) ||
+_neo-runner__run_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner run commands' commands "$@"
+}
+(( $+functions[_neo-runner__validate_commands] )) ||
+_neo-runner__validate_commands() {
+    local commands; commands=()
+    _describe -t commands 'neo-runner validate commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_neo-runner" ]; then
+    _neo-runner "$@"
+else
+    compdef _neo-runner neo-runner
+fi
