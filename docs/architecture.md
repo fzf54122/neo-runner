@@ -22,6 +22,7 @@
    - 重试、超时
    - `fail_fast` 与非 fail-fast 行为
    - 批次内并发（受 `max_concurrency` 控制）
+   - 最小事件流（`run_started/task_started/task_finished/run_finished`）
 4. `cli`：
    - `run / plan / validate` 子命令
    - 全局 `-f/--file` 配置入口
@@ -30,7 +31,7 @@
 ### 未完成（离目标还有距离的部分）
 
 1. 事件总线与可观测性：
-   - 目前仅命令行输出，尚未形成结构化事件流
+   - 事件已进入 `RunResult`，但尚未拆分独立 eventbus 与订阅机制
 2. 报告层：
    - JSON 报告已覆盖 `run/plan/validate`，但事件流与更丰富统计字段仍待补齐
 3. 插件体系完善：

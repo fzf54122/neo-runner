@@ -35,6 +35,7 @@ cargo test --workspace
 - CLI 已支持子命令：`run` / `plan` / `validate`
 - CLI 已支持输出格式：`--output text|json`（当前 `plan/validate` 完整支持 JSON）
 - CLI `run` 现已支持 JSON 报告（含任务级执行结果）
+- 已增加最小事件流（`run_started/task_started/task_finished/run_finished`）并随 `run --output json` 输出
 
 ## 💻 运行示例
 

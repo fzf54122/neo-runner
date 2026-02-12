@@ -1,5 +1,5 @@
 use crate::scheduler::build_batches;
-use runner_core::domain::{JobSpec, RetrySpec, RunResult, TaskRunResult, TaskSpec};
+use runner_core::domain::{JobSpec, RetrySpec, RunEvent, RunResult, TaskRunResult, TaskSpec};
 use tokio::task::JoinSet;
 
 fn resolve_max_attempts(job: &JobSpec, task: &runner_core::domain::TaskSpec) -> u32 {
@@ -121,6 +121,7 @@ pub async fn run() -> RunResult {
         total: 0,
         failed: 0,
         tasks: Vec::new(),
+        events: Vec::new(),
     })
 }
 
@@ -128,8 +129,20 @@ pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
     let batches = build_batches(job)?;
     let mut failed = 0usize;
     let mut task_results: Vec<TaskRunResult> = Vec::new();
+    let mut events: Vec<RunEvent> = Vec::new();
+    events.push(RunEvent {
+        kind: "run_started".to_string(),
+        task_id: None,
+    });
 
     for batch in batches {
+        for task in &batch {
+            events.push(RunEvent {
+                kind: "task_started".to_string(),
+                task_id: Some(task.id.clone()),
+            });
+        }
+
         let runnable: Vec<RunnableTask> = batch
             .into_iter()
             .map(|task| RunnableTask::from_task(job, task))
@@ -137,8 +150,17 @@ pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
 
         let outcomes = execute_batch(runnable, job.max_concurrency).await;
         for outcome in outcomes {
+            events.push(RunEvent {
+                kind: "task_finished".to_string(),
+                task_id: Some(outcome.id.clone()),
+            });
+
             if !outcome.success {
                 if job.fail_fast {
+                    events.push(RunEvent {
+                        kind: "run_finished".to_string(),
+                        task_id: None,
+                    });
                     return Err(
                         outcome
                             .error
@@ -155,11 +177,17 @@ pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
         }
     }
 
+    events.push(RunEvent {
+        kind: "run_finished".to_string(),
+        task_id: None,
+    });
+
     Ok(RunResult {
         success: failed == 0,
         total: job.tasks.len(),
         failed,
         tasks: task_results,
+        events,
     })
 }
 
@@ -207,5 +235,7 @@ mod tests {
         assert_eq!(result.total, 2);
         assert_eq!(result.failed, 2);
         assert_eq!(result.tasks.len(), 2);
+        assert!(result.events.iter().any(|e| e.kind == "run_started"));
+        assert!(result.events.iter().any(|e| e.kind == "run_finished"));
     }
 }

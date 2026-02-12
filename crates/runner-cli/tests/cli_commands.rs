@@ -75,4 +75,13 @@ fn run_command_json_output() {
     assert_eq!(v["failed"], 0);
     assert_eq!(v["tasks"][0]["id"], "hello");
     assert_eq!(v["tasks"][0]["success"], true);
+    assert!(v["events"].is_array());
+    let kinds: Vec<&str> = v["events"]
+        .as_array()
+        .expect("events should be array")
+        .iter()
+        .filter_map(|e| e["kind"].as_str())
+        .collect();
+    assert!(kinds.contains(&"run_started"));
+    assert!(kinds.contains(&"run_finished"));
 }

@@ -28,6 +28,7 @@ pub struct RunResult {
     pub total: usize,
     pub failed: usize,
     pub tasks: Vec<TaskRunResult>,
+    pub events: Vec<RunEvent>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +37,12 @@ pub struct TaskRunResult {
     pub success: bool,
     pub attempts: u32,
     pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunEvent {
+    pub kind: String,
+    pub task_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -19,3 +19,5 @@
 - 新增 CLI JSON 输出集成测试，保障自动化场景稳定性。
 - `runner-core` 引入任务级执行结果模型（`TaskRunResult`），`RunResult` 增加 `failed/tasks` 字段。
 - `runner-cli run --output json` 现可输出任务级报告（任务 id、成功状态、尝试次数、错误信息）。
+- `runner-app` 增加最小事件流（`run_started/task_started/task_finished/run_finished`），并纳入 `RunResult`。
+- `runner-cli` 的 `run --output json` 现包含事件数组，便于后续可观测性接入。
