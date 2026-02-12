@@ -12,3 +12,6 @@
 - `runner-cli` 接入配置文件参数 `-f/--file`，可直接执行示例配置。
 - `runner-cli` 增加 `run/plan/validate` 子命令，支持按阶段运行与排查。
 - 新增 `runner-app/scheduler` 单元测试与 `runner-cli` 集成测试，降低回归风险。
+- `runner-app/scheduler` 增加分层批次计划（batch）输出，支持后续并发执行扩展。
+- `runner-app/runner` 执行阶段接入 `max_concurrency` 并发限制，按批次并发执行任务。
+- 新增 `runner-app/runner` 失败策略测试（`fail_fast=true/false`）与批次调度测试。

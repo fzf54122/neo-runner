@@ -2,6 +2,11 @@ use runner_core::domain::{JobSpec, TaskSpec};
 use std::collections::{HashMap, VecDeque};
 
 pub fn build_plan<'a>(job: &'a JobSpec) -> Result<Vec<&'a TaskSpec>, String> {
+    let batches = build_batches(job)?;
+    Ok(batches.into_iter().flatten().collect())
+}
+
+pub fn build_batches<'a>(job: &'a JobSpec) -> Result<Vec<Vec<&'a TaskSpec>>, String> {
     // id -> task 引用
     let mut task_map: HashMap<&str, &TaskSpec> = HashMap::new();
     // 每个任务的入度（有多少前置依赖）
@@ -39,28 +44,48 @@ pub fn build_plan<'a>(job: &'a JobSpec) -> Result<Vec<&'a TaskSpec>, String> {
             queue.push_back(*id);
         }
     }
-    // 拓扑排序
-    let mut plan: Vec<&TaskSpec> = Vec::new();
-    while let Some(id) = queue.pop_front() {
-        let task = task_map
-            .get(id)
-            .ok_or_else(|| format!("internal error: missing task '{}'", id))?;
-        plan.push(*task);
-        if let Some(next_ids) = graph.get(id) {
-            for next_id in next_ids {
-                if let Some(v) = indegree.get_mut(next_id) {
-                    *v -= 1;
-                    if *v == 0 {
-                        queue.push_back(*next_id);
+    // 分层拓扑排序（每层可并发执行）
+    let mut batches: Vec<Vec<&TaskSpec>> = Vec::new();
+    let mut visited = 0usize;
+
+    while !queue.is_empty() {
+        let level_size = queue.len();
+        let mut level_ids: Vec<&str> = Vec::with_capacity(level_size);
+
+        for _ in 0..level_size {
+            let id = queue
+                .pop_front()
+                .ok_or_else(|| "internal error: empty queue".to_string())?;
+            level_ids.push(id);
+            visited += 1;
+
+            if let Some(next_ids) = graph.get(id) {
+                for next_id in next_ids {
+                    if let Some(v) = indegree.get_mut(next_id) {
+                        *v -= 1;
+                        if *v == 0 {
+                            queue.push_back(*next_id);
+                        }
                     }
                 }
             }
         }
+
+        let mut level_tasks = Vec::with_capacity(level_ids.len());
+        for id in level_ids {
+            let task = task_map
+                .get(id)
+                .ok_or_else(|| format!("internal error: missing task '{}'", id))?;
+            level_tasks.push(*task);
+        }
+        batches.push(level_tasks);
     }
-    if plan.len() != job.tasks.len() {
+
+    if visited != job.tasks.len() {
         return Err("dependency cycle detected".to_string());
     }
-    Ok(plan)
+
+    Ok(batches)
 }
 
 #[cfg(test)]
@@ -107,6 +132,29 @@ mod tests {
 
         assert!(lint_idx < build_idx);
         assert!(build_idx < test_idx);
+    }
+
+    #[test]
+    fn build_batches_levels() {
+        let j = job(vec![
+            task("test", &["build"]),
+            task("build", &["lint"]),
+            task("lint", &[]),
+            task("fmt", &[]),
+        ]);
+
+        let batches = build_batches(&j).expect("batches should build");
+        assert_eq!(batches.len(), 3);
+
+        let level0: Vec<&str> = batches[0].iter().map(|t| t.id.as_str()).collect();
+        assert!(level0.contains(&"lint"));
+        assert!(level0.contains(&"fmt"));
+
+        let level1: Vec<&str> = batches[1].iter().map(|t| t.id.as_str()).collect();
+        assert_eq!(level1, vec!["build"]);
+
+        let level2: Vec<&str> = batches[2].iter().map(|t| t.id.as_str()).collect();
+        assert_eq!(level2, vec!["test"]);
     }
 
     #[test]

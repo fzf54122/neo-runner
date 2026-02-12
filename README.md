@@ -28,8 +28,10 @@ cargo test --workspace
 
 - 已打通主流程：`load -> plan -> execute -> report`
 - 支持任务依赖拓扑排序（含循环依赖检测）
+- 调度已支持按依赖层分批执行（batch）
 - 支持 `type: shell` 任务执行
 - 支持超时与重试参数解析（`default_timeout`/`timeout`、`default_retry`/`retry`）
+- 执行阶段已接入 `max_concurrency` 并发上限与 `fail_fast` 行为控制
 - CLI 已支持子命令：`run` / `plan` / `validate`
 
 ## 💻 运行示例
