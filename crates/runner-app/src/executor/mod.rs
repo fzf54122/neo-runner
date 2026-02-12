@@ -83,6 +83,9 @@ impl TaskExecutor for ShellExecutor {
 
     fn execute<'a>(&'a self, task: &'a TaskSpec) -> TaskFuture<'a> {
         Box::pin(async move {
+            if let Err(err) = runner_plugins::shell::validate(task.cmd.as_deref()) {
+                return ExecutionResult::err(format!("task '{}' {}", task.id, err), None, None);
+            }
             let Some(cmd) = task.cmd.as_deref() else {
                 return ExecutionResult::err(
                     format!("task '{}' missing shell cmd", task.id),
@@ -116,6 +119,9 @@ impl TaskExecutor for HttpExecutor {
 
     fn execute<'a>(&'a self, task: &'a TaskSpec) -> TaskFuture<'a> {
         Box::pin(async move {
+            if let Err(err) = runner_plugins::http::validate(task.method.as_deref(), task.url.as_deref()) {
+                return ExecutionResult::err(format!("task '{}' {}", task.id, err), None, None);
+            }
             let Some(method) = task.method.as_deref() else {
                 return ExecutionResult::err(
                     format!("task '{}' missing http method", task.id),
@@ -168,6 +174,11 @@ impl TaskExecutor for SqlExecutor {
 
     fn execute<'a>(&'a self, task: &'a TaskSpec) -> TaskFuture<'a> {
         Box::pin(async move {
+            if let Err(err) =
+                runner_plugins::sql::validate(task.dsn.as_deref(), task.query.as_deref(), task.sql_file.as_deref())
+            {
+                return ExecutionResult::err(format!("task '{}' {}", task.id, err), None, None);
+            }
             let Some(dsn) = task.dsn.as_deref() else {
                 return ExecutionResult::err(
                     format!("task '{}' missing sql dsn", task.id),
