@@ -93,9 +93,11 @@ cargo xtask check
 cargo xtask test
 cargo xtask ci
 cargo xtask build-release
+cargo xtask doctor
 
 # 仅打印命令，不执行
 cargo xtask --dry-run ci
+cargo xtask --dry-run doctor --with-check
 ```
 
 ## 💻 示例

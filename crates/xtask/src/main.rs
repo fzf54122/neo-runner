@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::path::Path;
 use std::process::{Command, ExitStatus};
 
 #[derive(Debug, Parser)]
@@ -18,6 +19,10 @@ enum Task {
     Check,
     Ci,
     BuildRelease,
+    Doctor {
+        #[arg(long, help = "Also run cargo check --workspace")]
+        with_check: bool,
+    },
 }
 
 fn run_cmd(dry_run: bool, program: &str, args: &[&str]) -> Result<(), String> {
@@ -83,10 +88,36 @@ fn main() {
             "cargo",
             &["build", "-p", "runner-cli", "--release"],
         ),
+        Task::Doctor { with_check } => run_doctor(args.dry_run, with_check),
     };
 
     if let Err(err) = result {
         eprintln!("[xtask] error: {err}");
         std::process::exit(1);
     }
+}
+
+fn run_doctor(dry_run: bool, with_check: bool) -> Result<(), String> {
+    run_cmd(dry_run, "rustc", &["--version"])?;
+    run_cmd(dry_run, "cargo", &["--version"])?;
+
+    for path in [
+        "Cargo.toml",
+        "README.md",
+        "docs/architecture.md",
+        "examples/demo.yaml",
+        "examples/demo-http.yaml",
+        "examples/demo-sql.yaml",
+    ] {
+        println!("[xtask] check path exists: {path}");
+        if !dry_run && !Path::new(path).exists() {
+            return Err(format!("required path not found: {path}"));
+        }
+    }
+
+    if with_check {
+        run_cmd(dry_run, "cargo", &["check", "--workspace"])?;
+    }
+
+    Ok(())
 }
