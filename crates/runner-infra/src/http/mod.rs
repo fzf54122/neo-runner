@@ -6,6 +6,10 @@ pub async fn request(method: &str, url: &str) -> Result<u16, String> {
     }
 
     let url = url.trim();
+    if let Some((delay_ms, status)) = parse_mock_delay_status(url) {
+        tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        return Ok(status);
+    }
     if let Some(code) = parse_mock_status(url) {
         return Ok(code);
     }
@@ -31,4 +35,38 @@ fn parse_mock_status(url: &str) -> Option<u16> {
         return None;
     }
     url.trim_start_matches(prefix).parse::<u16>().ok()
+}
+
+fn parse_mock_delay_status(url: &str) -> Option<(u64, u16)> {
+    let prefix = "mock://delay/";
+    if !url.starts_with(prefix) {
+        return None;
+    }
+    let rest = url.trim_start_matches(prefix);
+    let mut parts = rest.split('/');
+    let delay = parts.next()?.parse::<u64>().ok()?;
+    if parts.next()? != "status" {
+        return None;
+    }
+    let status = parts.next()?.parse::<u16>().ok()?;
+    Some((delay, status))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn request_mock_status_ok() {
+        let code = request("GET", "mock://status/204").await.expect("mock status should work");
+        assert_eq!(code, 204);
+    }
+
+    #[tokio::test]
+    async fn request_mock_delay_status_ok() {
+        let code = request("GET", "mock://delay/10/status/201")
+            .await
+            .expect("mock delay status should work");
+        assert_eq!(code, 201);
+    }
 }

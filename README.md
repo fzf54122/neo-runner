@@ -35,6 +35,7 @@
 - ✅ 报告聚合：批次统计、重试分布、失败分组。
 - ✅ 事件流：`run_started/task_started/task_finished/run_finished`（支持 eventbus 订阅）。
 - ✅ 执行插件注册：内置 `shell/http/sql` 通过统一执行注册表接入。
+- ✅ 扩展入口：支持通过注册表注入自定义执行器（为外部插件铺路）。
 
 ## 📊 能力矩阵
 

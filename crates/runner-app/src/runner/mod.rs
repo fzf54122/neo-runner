@@ -162,8 +162,15 @@ pub async fn run() -> RunResult {
 }
 
 pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
-    let batches = build_batches(job)?;
     let registry = Arc::new(ExecutorRegistry::with_builtin());
+    run_job_with_registry(job, registry).await
+}
+
+pub async fn run_job_with_registry(
+    job: &JobSpec,
+    registry: Arc<ExecutorRegistry>,
+) -> Result<RunResult, String> {
+    let batches = build_batches(job)?;
     let mut failed = 0usize;
     let mut task_results: Vec<TaskRunResult> = Vec::new();
     let mut batch_summaries: Vec<BatchSummary> = Vec::new();
@@ -258,10 +265,14 @@ mod tests {
     use super::*;
 
     fn mk_job(fail_fast: bool, tasks: Vec<TaskSpec>) -> JobSpec {
+        mk_job_with_concurrency(fail_fast, 2, tasks)
+    }
+
+    fn mk_job_with_concurrency(fail_fast: bool, max_concurrency: usize, tasks: Vec<TaskSpec>) -> JobSpec {
         JobSpec {
             name: "demo".to_string(),
             fail_fast,
-            max_concurrency: 2,
+            max_concurrency,
             tasks,
             default_timeout_ms: None,
             default_retry: RetrySpec { max_attempts: 1 },
@@ -367,5 +378,27 @@ mod tests {
         assert!(result.success);
         assert_eq!(result.total, 1);
         assert_eq!(result.failed, 0);
+    }
+
+    #[tokio::test]
+    async fn run_job_http_tasks_execute_concurrently() {
+        let tasks = vec![
+            mk_http_task("h1", "GET", "mock://delay/120/status/200"),
+            mk_http_task("h2", "GET", "mock://delay/120/status/200"),
+        ];
+
+        let seq_job = mk_job_with_concurrency(true, 1, tasks.clone());
+        let conc_job = mk_job_with_concurrency(true, 2, tasks);
+
+        let seq_started = Instant::now();
+        let seq = run_job(&seq_job).await.expect("seq should succeed");
+        let seq_elapsed = seq_started.elapsed();
+
+        let conc_started = Instant::now();
+        let conc = run_job(&conc_job).await.expect("concurrent should succeed");
+        let conc_elapsed = conc_started.elapsed();
+
+        assert!(seq.success && conc.success);
+        assert!(conc_elapsed < seq_elapsed);
     }
 }

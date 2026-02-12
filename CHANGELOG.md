@@ -38,3 +38,5 @@
 - `RunResult` 新增报告聚合字段：`batches/retry_distribution/failure_groups`。
 - `runner-cli` JSON 输出同步包含批次统计、重试分布与失败聚合信息。
 - `xtask` 增加工程命令：`fmt/clippy/test/check/ci/build-release`，支持 `--dry-run`。
+- `runner-app/runner` 增加 `run_job_with_registry` 扩展入口，支持注入自定义执行注册表。
+- 新增 HTTP 并发行为测试（对比并发与串行耗时），验证并发执行路径生效。
