@@ -115,6 +115,7 @@ GitHub `Release` workflow supports:
 - Release assets include `.deb`, Linux raw binary, and Windows `.exe` (with zip/checksums).
 - The Release page groups changes by `feat:` and `fix:` commit prefixes.
 - Executables are compressed with `upx -9` before packaging to reduce artifact size.
+- Linux binaries are built with `x86_64-unknown-linux-musl` to avoid host `glibc` version mismatch.
 
 ## 💻 Examples
 
