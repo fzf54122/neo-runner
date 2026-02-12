@@ -86,6 +86,9 @@ fn run_command_json_output() {
     assert_eq!(v["tasks"][0]["status_code"], serde_json::Value::Null);
     assert!(v["tasks"][0]["duration_ms"].as_u64().is_some());
     assert!(v["events"].is_array());
+    assert!(v["batches"].is_array());
+    assert!(v["retry_distribution"].is_array());
+    assert!(v["failure_groups"].is_array());
     let kinds: Vec<&str> = v["events"]
         .as_array()
         .expect("events should be array")

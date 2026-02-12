@@ -5,11 +5,12 @@ pub fn print_result(result: &RunResult, format: OutputFormat) {
     match format {
         OutputFormat::Text => {
             println!(
-                "success={} total={} failed={} events={}",
+                "success={} total={} failed={} events={} batches={}",
                 result.success,
                 result.total,
                 result.failed,
-                result.events.len()
+                result.events.len(),
+                result.batches.len()
             )
         }
         OutputFormat::Json => {
@@ -19,6 +20,9 @@ pub fn print_result(result: &RunResult, format: OutputFormat) {
                 "failed": result.failed,
                 "tasks": result.tasks,
                 "events": result.events,
+                "batches": result.batches,
+                "retry_distribution": result.retry_distribution,
+                "failure_groups": result.failure_groups,
             });
             println!("{}", payload);
         }

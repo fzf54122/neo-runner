@@ -35,6 +35,9 @@ pub struct RunResult {
     pub failed: usize,
     pub tasks: Vec<TaskRunResult>,
     pub events: Vec<RunEvent>,
+    pub batches: Vec<BatchSummary>,
+    pub retry_distribution: Vec<RetryDistributionItem>,
+    pub failure_groups: Vec<FailureGroup>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +55,27 @@ pub struct TaskRunResult {
 pub struct RunEvent {
     pub kind: String,
     pub task_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BatchSummary {
+    pub batch_index: usize,
+    pub total: usize,
+    pub failed: usize,
+    pub duration_ms: u128,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetryDistributionItem {
+    pub attempts: u32,
+    pub count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FailureGroup {
+    pub reason: String,
+    pub count: usize,
+    pub task_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

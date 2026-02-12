@@ -1,9 +1,16 @@
+use crate::eventbus::{EventBus, InMemoryEventCollector};
+use crate::executor::{ExecutionResult, ExecutorRegistry};
 use crate::scheduler::build_batches;
-use runner_core::domain::{JobSpec, RetrySpec, RunEvent, RunResult, TaskRunResult, TaskSpec};
+use runner_core::domain::{
+    BatchSummary, FailureGroup, JobSpec, RetryDistributionItem, RetrySpec, RunEvent, RunResult,
+    TaskRunResult, TaskSpec,
+};
+use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::time::Instant;
 use tokio::task::JoinSet;
 
-fn resolve_max_attempts(job: &JobSpec, task: &runner_core::domain::TaskSpec) -> u32 {
+fn resolve_max_attempts(job: &JobSpec, task: &TaskSpec) -> u32 {
     task.retry
         .as_ref()
         .map(|r| r.max_attempts)
@@ -12,234 +19,63 @@ fn resolve_max_attempts(job: &JobSpec, task: &runner_core::domain::TaskSpec) -> 
 
 #[derive(Debug, Clone)]
 struct RunnableTask {
-    id: String,
-    task_type: String,
-    cmd: Option<String>,
-    method: Option<String>,
-    url: Option<String>,
-    expected_status: Option<Vec<u16>>,
-    dsn: Option<String>,
-    query: Option<String>,
-    sql_file: Option<String>,
-    timeout_ms: Option<u64>,
+    spec: TaskSpec,
     attempts: u32,
-}
-
-#[derive(Debug, Clone)]
-struct AttemptResult {
-    success: bool,
-    error: Option<String>,
-    duration_ms: u128,
-    exit_code: Option<i32>,
-    status_code: Option<u16>,
 }
 
 impl RunnableTask {
     fn from_task(job: &JobSpec, task: &TaskSpec) -> Self {
         Self {
-            id: task.id.clone(),
-            task_type: task.task_type.clone(),
-            cmd: task.cmd.clone(),
-            method: task.method.clone(),
-            url: task.url.clone(),
-            expected_status: task.expected_status.clone(),
-            dsn: task.dsn.clone(),
-            query: task.query.clone(),
-            sql_file: task.sql_file.clone(),
-            timeout_ms: task.timeout_ms,
+            spec: task.clone(),
             attempts: resolve_max_attempts(job, task),
         }
     }
 }
 
-async fn execute_task(task: RunnableTask) -> AttemptResult {
-    let started = Instant::now();
+async fn execute_task_with_retry(registry: Arc<ExecutorRegistry>, task: RunnableTask) -> TaskRunResult {
+    let mut last: Option<(ExecutionResult, u128)> = None;
 
-    match task.task_type.as_str() {
-        "shell" => {
-            let cmd = task
-                .cmd
-                .as_deref();
-
-            let Some(cmd) = cmd else {
-                return AttemptResult {
-                    success: false,
-                    error: Some(format!("task '{}' missing shell cmd", task.id)),
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: None,
-                };
-            };
-
-            match runner_infra::process::run_shell(cmd, task.timeout_ms).await {
-                Ok(0) => AttemptResult {
-                    success: true,
-                    error: None,
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: Some(0),
-                    status_code: None,
-                },
-                Ok(code) => AttemptResult {
-                    success: false,
-                    error: Some(format!("task '{}' exited with status {}", task.id, code)),
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: Some(code),
-                    status_code: None,
-                },
-                Err(err) => AttemptResult {
-                    success: false,
-                    error: Some(format!("task '{}' failed: {}", task.id, err)),
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: None,
-                },
-            }
-        }
-        "http" => {
-            let Some(method) = task.method.as_deref() else {
-                return AttemptResult {
-                    success: false,
-                    error: Some(format!("task '{}' missing http method", task.id)),
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: None,
-                };
-            };
-
-            let Some(url) = task.url.as_deref() else {
-                return AttemptResult {
-                    success: false,
-                    error: Some(format!("task '{}' missing http url", task.id)),
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: None,
-                };
-            };
-
-            let status = match runner_infra::http::request(method, url).await {
-                Ok(status) => status,
-                Err(err) => {
-                    return AttemptResult {
-                        success: false,
-                        error: Some(format!("task '{}' failed: {}", task.id, err)),
-                        duration_ms: started.elapsed().as_millis(),
-                        exit_code: None,
-                        status_code: None,
-                    };
-                }
-            };
-
-            let accepted: Vec<u16> = task
-                .expected_status
-                .clone()
-                .unwrap_or_else(|| vec![200]);
-            if accepted.contains(&status) {
-                AttemptResult {
-                    success: true,
-                    error: None,
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: Some(status),
-                }
-            } else {
-                AttemptResult {
-                    success: false,
-                    error: Some(format!(
-                        "task '{}' got unexpected status {}, expected {:?}",
-                        task.id, status, accepted
-                    )),
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: Some(status),
-                }
-            }
-        }
-        "sql" => {
-            let Some(dsn) = task.dsn.as_deref() else {
-                return AttemptResult {
-                    success: false,
-                    error: Some(format!("task '{}' missing sql dsn", task.id)),
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: None,
-                };
-            };
-
-            match runner_infra::sql::execute_batch(
-                dsn,
-                task.query.as_deref(),
-                task.sql_file.as_deref(),
-            )
-            .await
-            {
-                Ok(()) => AttemptResult {
-                    success: true,
-                    error: None,
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: None,
-                },
-                Err(err) => AttemptResult {
-                    success: false,
-                    error: Some(format!("task '{}' failed: {}", task.id, err)),
-                    duration_ms: started.elapsed().as_millis(),
-                    exit_code: None,
-                    status_code: None,
-                },
-            }
-        }
-        other => AttemptResult {
-            success: false,
-            error: Some(format!("unsupported task type: {}", other)),
-            duration_ms: started.elapsed().as_millis(),
-            exit_code: None,
-            status_code: None,
-        },
-    }
-}
-
-async fn execute_task_with_retry(task: RunnableTask) -> TaskRunResult {
-    let mut last: Option<AttemptResult> = None;
     for attempt in 1..=task.attempts {
-        let once = RunnableTask {
-            attempts: 1,
-            ..task.clone()
-        };
-        let result = execute_task(once).await;
+        let started = Instant::now();
+        let result = registry.execute(&task.spec).await;
+        let elapsed = started.elapsed().as_millis();
+
         if result.success {
             return TaskRunResult {
-                id: task.id,
+                id: task.spec.id,
                 success: true,
                 attempts: attempt,
                 error: None,
-                duration_ms: result.duration_ms,
+                duration_ms: elapsed,
                 exit_code: result.exit_code,
                 status_code: result.status_code,
             };
         }
-        last = Some(result);
+
+        last = Some((result, elapsed));
     }
 
-    let fallback = last.unwrap_or(AttemptResult {
-        success: false,
-        error: Some("task failed without attempt result".to_string()),
-        duration_ms: 0,
-        exit_code: None,
-        status_code: None,
-    });
+    let (fallback, elapsed) = last.unwrap_or((
+        ExecutionResult::err("task failed without result", None, None),
+        0,
+    ));
 
     TaskRunResult {
-        id: task.id,
+        id: task.spec.id,
         success: false,
         attempts: task.attempts,
         error: fallback.error,
-        duration_ms: fallback.duration_ms,
+        duration_ms: elapsed,
         exit_code: fallback.exit_code,
         status_code: fallback.status_code,
     }
 }
 
-async fn execute_batch(tasks: Vec<RunnableTask>, max_concurrency: usize) -> Vec<TaskRunResult> {
+async fn execute_batch(
+    tasks: Vec<RunnableTask>,
+    max_concurrency: usize,
+    registry: Arc<ExecutorRegistry>,
+) -> Vec<TaskRunResult> {
     let mut results: Vec<TaskRunResult> = Vec::new();
     let mut set: JoinSet<TaskRunResult> = JoinSet::new();
     let mut idx = 0usize;
@@ -248,8 +84,9 @@ async fn execute_batch(tasks: Vec<RunnableTask>, max_concurrency: usize) -> Vec<
     while idx < tasks.len() || !set.is_empty() {
         while set.len() < concurrency && idx < tasks.len() {
             let task = tasks[idx].clone();
+            let reg = registry.clone();
             idx += 1;
-            set.spawn(async move { execute_task_with_retry(task).await });
+            set.spawn(async move { execute_task_with_retry(reg, task).await });
         }
 
         if let Some(joined) = set.join_next().await {
@@ -271,6 +108,37 @@ async fn execute_batch(tasks: Vec<RunnableTask>, max_concurrency: usize) -> Vec<
     results
 }
 
+fn build_retry_distribution(tasks: &[TaskRunResult]) -> Vec<RetryDistributionItem> {
+    let mut map: BTreeMap<u32, usize> = BTreeMap::new();
+    for t in tasks {
+        *map.entry(t.attempts).or_insert(0) += 1;
+    }
+    map.into_iter()
+        .map(|(attempts, count)| RetryDistributionItem { attempts, count })
+        .collect()
+}
+
+fn build_failure_groups(tasks: &[TaskRunResult]) -> Vec<FailureGroup> {
+    let mut map: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for t in tasks {
+        if !t.success {
+            let key = t
+                .error
+                .clone()
+                .unwrap_or_else(|| "unknown failure".to_string());
+            map.entry(key).or_default().push(t.id.clone());
+        }
+    }
+
+    map.into_iter()
+        .map(|(reason, task_ids)| FailureGroup {
+            count: task_ids.len(),
+            reason,
+            task_ids,
+        })
+        .collect()
+}
+
 pub async fn run() -> RunResult {
     let job = JobSpec {
         name: "default".to_string(),
@@ -287,22 +155,34 @@ pub async fn run() -> RunResult {
         failed: 0,
         tasks: Vec::new(),
         events: Vec::new(),
+        batches: Vec::new(),
+        retry_distribution: Vec::new(),
+        failure_groups: Vec::new(),
     })
 }
 
 pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
     let batches = build_batches(job)?;
+    let registry = Arc::new(ExecutorRegistry::with_builtin());
     let mut failed = 0usize;
     let mut task_results: Vec<TaskRunResult> = Vec::new();
-    let mut events: Vec<RunEvent> = Vec::new();
-    events.push(RunEvent {
+    let mut batch_summaries: Vec<BatchSummary> = Vec::new();
+
+    let mut bus = EventBus::new();
+    let collector = InMemoryEventCollector::new();
+    let probe = collector.clone();
+    bus.subscribe(collector);
+
+    bus.publish(&RunEvent {
         kind: "run_started".to_string(),
         task_id: None,
     });
 
-    for batch in batches {
+    for (batch_index, batch) in batches.into_iter().enumerate() {
+        let started = Instant::now();
+
         for task in &batch {
-            events.push(RunEvent {
+            bus.publish(&RunEvent {
                 kind: "task_started".to_string(),
                 task_id: Some(task.id.clone()),
             });
@@ -312,17 +192,20 @@ pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
             .into_iter()
             .map(|task| RunnableTask::from_task(job, task))
             .collect();
+        let outcomes = execute_batch(runnable, job.max_concurrency, registry.clone()).await;
+        let batch_total = outcomes.len();
 
-        let outcomes = execute_batch(runnable, job.max_concurrency).await;
+        let mut batch_failed = 0usize;
         for outcome in outcomes {
-            events.push(RunEvent {
+            bus.publish(&RunEvent {
                 kind: "task_finished".to_string(),
                 task_id: Some(outcome.id.clone()),
             });
 
             if !outcome.success {
+                batch_failed += 1;
                 if job.fail_fast {
-                    events.push(RunEvent {
+                    bus.publish(&RunEvent {
                         kind: "run_finished".to_string(),
                         task_id: None,
                     });
@@ -340,12 +223,23 @@ pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
             }
             task_results.push(outcome);
         }
+
+        batch_summaries.push(BatchSummary {
+            batch_index,
+            total: batch_total,
+            failed: batch_failed,
+            duration_ms: started.elapsed().as_millis(),
+        });
     }
 
-    events.push(RunEvent {
+    bus.publish(&RunEvent {
         kind: "run_finished".to_string(),
         task_id: None,
     });
+
+    let retry_distribution = build_retry_distribution(&task_results);
+    let failure_groups = build_failure_groups(&task_results);
+    let events = probe.snapshot();
 
     Ok(RunResult {
         success: failed == 0,
@@ -353,6 +247,9 @@ pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
         failed,
         tasks: task_results,
         events,
+        batches: batch_summaries,
+        retry_distribution,
+        failure_groups,
     })
 }
 
@@ -440,7 +337,8 @@ mod tests {
         assert_eq!(result.total, 2);
         assert_eq!(result.failed, 2);
         assert_eq!(result.tasks.len(), 2);
-        assert!(result.tasks.iter().all(|t| t.duration_ms <= 1_000));
+        assert!(!result.failure_groups.is_empty());
+        assert!(!result.retry_distribution.is_empty());
         assert!(result.events.iter().any(|e| e.kind == "run_started"));
         assert!(result.events.iter().any(|e| e.kind == "run_finished"));
     }

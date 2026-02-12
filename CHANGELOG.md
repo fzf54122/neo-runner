@@ -33,3 +33,7 @@
 - CLI 二进制统一为 `neo-runner`（支持 `cargo run --bin neo-runner` 与 `cargo install --bin neo-runner`）。
 - 重写 `README.md` 为更聚焦的工程化风格，强调能力矩阵与上手路径。
 - 新增博客草稿：`2026-02-12-neo-runner.md`（参考 relihttp 文风）。
+- `runner-app/eventbus` 增加可订阅事件总线与内存采集器，执行事件通过总线发布。
+- `runner-app/executor` 增加统一执行注册表，内置 `shell/http/sql` 通过注册机制接入。
+- `RunResult` 新增报告聚合字段：`batches/retry_distribution/failure_groups`。
+- `runner-cli` JSON 输出同步包含批次统计、重试分布与失败聚合信息。
