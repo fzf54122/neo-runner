@@ -8,7 +8,7 @@ fn load_job_or_exit(file: &str) -> runner_core::domain::JobSpec {
     match runner_infra::config_loader::load_yaml(file) {
         Ok(job) => job,
         Err(err) => {
-            eprintln!("load config failed: {err}");
+            eprintln!("load config failed [{}]: {err}", err.code());
             process::exit(2);
         }
     }

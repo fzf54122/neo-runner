@@ -1,4 +1,5 @@
 use runner_core::domain::{JobSpec, RetrySpec, TaskSpec};
+use runner_core::errors::{ErrorCode, RunnerError};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::fs;
@@ -54,10 +55,13 @@ struct RawRetry {
     max_attempts: Option<u32>,
 }
 
-pub fn load_yaml(path: &str) -> Result<JobSpec, String> {
+pub fn load_yaml(path: &str) -> Result<JobSpec, RunnerError> {
     let content = fs::read_to_string(path)
         // 把底层错误转换函数要求的string
-        .map_err(|e| format!("read file failed: {}", e))?;
+        .map_err(|e| RunnerError::Config {
+            code: ErrorCode::ConfigIo,
+            message: format!("read file failed: {}", e),
+        })?;
     let mut job = load_yaml_str(&content)?;
     let base_dir = Path::new(path)
         .parent()
@@ -87,9 +91,11 @@ pub fn load_yaml(path: &str) -> Result<JobSpec, String> {
 }
 
 // 纯解析/校验层
-pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
-    let raw: RawConfig =
-        serde_yaml::from_str(content).map_err(|e| format!("parse yaml failed: {}", e))?;
+pub fn load_yaml_str(content: &str) -> Result<JobSpec, RunnerError> {
+    let raw: RawConfig = serde_yaml::from_str(content).map_err(|e| RunnerError::Config {
+        code: ErrorCode::ConfigInvalid,
+        message: format!("parse yaml failed: {}", e),
+    })?;
 
     let fail_fast: bool = raw.job.fail_fast.unwrap_or(true);
     let max_concurrency = raw.job.max_concurrency.unwrap_or(1);
@@ -98,7 +104,11 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
         .default_timeout
         .as_deref()
         .map(parse_duration_ms)
-        .transpose()?;
+        .transpose()
+        .map_err(|message| RunnerError::Config {
+            code: ErrorCode::ConfigInvalid,
+            message,
+        })?;
     let default_max_attempts = raw
         .job
         .default_retry
@@ -106,29 +116,44 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
         .and_then(|r| r.max_attempts)
         .unwrap_or(1);
     if default_max_attempts == 0 {
-        return Err("default max attempts not allowed".to_string());
+        return Err(RunnerError::Config {
+            code: ErrorCode::ConfigInvalid,
+            message: "default max attempts not allowed".to_string(),
+        });
     }
     let default_retry = RetrySpec {
         max_attempts: default_max_attempts,
     };
 
     if raw.version != CONFIG_VERSION {
-        return Err(format!(
-            "unsupported version: got {}, expected {}",
-            raw.version, CONFIG_VERSION
-        ));
+        return Err(RunnerError::Config {
+            code: ErrorCode::ConfigInvalid,
+            message: format!(
+                "unsupported version: got {}, expected {}",
+                raw.version, CONFIG_VERSION
+            ),
+        });
     }
 
     if max_concurrency == 0 {
-        return Err("max concurrency not allowed".to_string());
+        return Err(RunnerError::Config {
+            code: ErrorCode::ConfigInvalid,
+            message: "max concurrency not allowed".to_string(),
+        });
     }
 
     if raw.job.name.trim().is_empty() {
-        return Err("job.name cannot be empty".to_string());
+        return Err(RunnerError::Config {
+            code: ErrorCode::ConfigInvalid,
+            message: "job.name cannot be empty".to_string(),
+        });
     }
 
     if raw.job.tasks.is_empty() {
-        return Err("job.tasks cannot be empty".to_string());
+        return Err(RunnerError::Config {
+            code: ErrorCode::ConfigInvalid,
+            message: "job.tasks cannot be empty".to_string(),
+        });
     }
 
     // 检查task id是否重复
@@ -190,28 +215,44 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
                 .map(ToString::to_string);
 
             if id.is_empty() {
-                return Err("task.id cannot be empty".to_string());
+                return Err(RunnerError::Config {
+                    code: ErrorCode::ConfigInvalid,
+                    message: "task.id cannot be empty".to_string(),
+                });
             }
             // insert 返回true/false 如果是false说明已经存在了
             if !seen.insert(id.to_string()) {
-                return Err(format!("duplicate task id: '{}'", id));
+                return Err(RunnerError::Config {
+                    code: ErrorCode::ConfigInvalid,
+                    message: format!("duplicate task id: '{}'", id),
+                });
             }
 
             if task_type.is_empty() {
-                return Err("task.type cannot be empty".to_string());
+                return Err(RunnerError::Config {
+                    code: ErrorCode::ConfigInvalid,
+                    message: "task.type cannot be empty".to_string(),
+                });
             }
             // 任务超时时间可以为空，为空时用默认值
             let task_timeout_ms = raw_task
                 .timeout
                 .as_deref()
                 .map(parse_duration_ms)
-                .transpose()?;
+                .transpose()
+                .map_err(|message| RunnerError::Config {
+                    code: ErrorCode::ConfigInvalid,
+                    message,
+                })?;
             // 如果任务超时时间为空，用默认值
             let timeout_ms = task_timeout_ms.or(default_timeout_ms);
             let retry = match raw_task.retry.as_ref().and_then(|r| r.max_attempts) {
                 Some(v) => {
                     if v == 0 {
-                        return Err("task retry max attempts not allowed".to_string());
+                        return Err(RunnerError::Config {
+                            code: ErrorCode::ConfigInvalid,
+                            message: "task retry max attempts not allowed".to_string(),
+                        });
                     }
                     Some(RetrySpec { max_attempts: v })
                 }
@@ -234,7 +275,7 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
             })
         })
         // 收集所有结果，有一个失败就返回失败，自动返回失败
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, RunnerError>>()?;
 
     let all_ids: HashSet<String> = tasks.iter().map(|t| t.id.clone()).collect();
 
@@ -242,14 +283,17 @@ pub fn load_yaml_str(content: &str) -> Result<JobSpec, String> {
         for dep in &task.depends_on {
             // 不能依赖自己
             if dep == &task.id {
-                return Err(format!("task '{}' depends on itself", task.id));
+                return Err(RunnerError::Config {
+                    code: ErrorCode::ConfigInvalid,
+                    message: format!("task '{}' depends on itself", task.id),
+                });
             }
             // 依赖必须存在
             if !all_ids.contains(dep) {
-                return Err(format!(
-                    "task '{}' depends on non-existent task '{}'",
-                    task.id, dep
-                ));
+                return Err(RunnerError::Config {
+                    code: ErrorCode::ConfigInvalid,
+                    message: format!("task '{}' depends on non-existent task '{}'", task.id, dep),
+                });
             }
         }
     }
@@ -341,7 +385,7 @@ mod tests {
                       type: shell
         "#;
         let err = load_yaml_str(yaml).unwrap_err();
-        assert!(err.contains("duplicate task id"));
+        assert!(err.to_string().contains("duplicate task id"));
     }
 
     // 失败解析：不支持的版本
@@ -356,7 +400,7 @@ mod tests {
                       type: shell
         "#;
         let err = load_yaml_str(yaml).unwrap_err();
-        assert!(err.contains("unsupported version"));
+        assert!(err.to_string().contains("unsupported version"));
     }
 
     // 失败解析：未知依赖
@@ -375,7 +419,9 @@ mod tests {
                         - task3
         "#;
         let err = load_yaml_str(yaml).unwrap_err();
-        assert!(err.contains("task 'task2' depends on non-existent task 'task3'"));
+        assert!(err
+            .to_string()
+            .contains("task 'task2' depends on non-existent task 'task3'"));
     }
 
     // 失败解析：循环依赖
@@ -391,7 +437,7 @@ mod tests {
               depends_on: [task1]
         "#;
         let err = load_yaml_str(yaml).unwrap_err();
-        assert!(err.contains("depends on itself"));
+        assert!(err.to_string().contains("depends on itself"));
     }
 
     #[test]
@@ -444,7 +490,7 @@ job:
 "#;
 
         let err = load_yaml_str(yaml).unwrap_err();
-        assert!(err.contains("invalid duration"));
+        assert!(err.to_string().contains("invalid duration"));
     }
 
     #[test]
@@ -460,7 +506,8 @@ job:
 "#;
 
         let err = load_yaml_str(yaml).unwrap_err();
-        assert!(err.contains("empty") || err.contains("cannot be empty"));
+        let msg = err.to_string();
+        assert!(msg.contains("empty") || msg.contains("cannot be empty"));
     }
 
     #[test]
@@ -529,7 +576,7 @@ job:
       type: shell
 "#;
         let err = load_yaml_str(yaml_job_retry_zero).unwrap_err();
-        assert!(err.contains("default max attempts"));
+        assert!(err.to_string().contains("default max attempts"));
 
         let yaml_task_retry_zero = r#"
 version: 1
@@ -542,7 +589,7 @@ job:
         max_attempts: 0
 "#;
         let err = load_yaml_str(yaml_task_retry_zero).unwrap_err();
-        assert!(err.contains("task retry max attempts"));
+        assert!(err.to_string().contains("task retry max attempts"));
     }
 
     #[test]

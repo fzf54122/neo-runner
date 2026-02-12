@@ -43,3 +43,4 @@
 - `runner-core/errors` 升级为带错误码的结构化错误模型（配置/计划/执行/内部）。
 - `xtask` 增加 `doctor` 命令，可检查环境与关键路径，支持 `--with-check`。
 - `plugin-spec` 新增外部插件生命周期草案（`on_load/on_init/execute/on_shutdown`）。
+- `runner-infra/config_loader` 已接入结构化错误模型，CLI 会输出错误码以便自动化识别。
