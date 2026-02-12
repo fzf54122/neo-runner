@@ -37,7 +37,7 @@ async fn main() {
             let plan = match runner_app::scheduler::build_plan(&job) {
                 Ok(plan) => plan,
                 Err(err) => {
-                    eprintln!("plan failed: {err}");
+                    eprintln!("plan failed [{}]: {err}", err.code());
                     process::exit(1);
                 }
             };
@@ -51,7 +51,7 @@ async fn main() {
                     output::print_result(&result, output_format);
                 }
                 Err(err) => {
-                    eprintln!("run failed: {err}");
+                    eprintln!("run failed [{}]: {err}", err.code());
                     process::exit(1);
                 }
             }

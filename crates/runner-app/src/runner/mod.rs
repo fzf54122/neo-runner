@@ -5,6 +5,7 @@ use runner_core::domain::{
     BatchSummary, FailureGroup, JobSpec, RetryDistributionItem, RetrySpec, RunEvent, RunResult,
     TaskRunResult, TaskSpec,
 };
+use runner_core::errors::{ErrorCode, RunnerError};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
@@ -161,7 +162,7 @@ pub async fn run() -> RunResult {
     })
 }
 
-pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
+pub async fn run_job(job: &JobSpec) -> Result<RunResult, RunnerError> {
     let registry = Arc::new(ExecutorRegistry::with_builtin());
     run_job_with_registry(job, registry).await
 }
@@ -169,7 +170,7 @@ pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
 pub async fn run_job_with_registry(
     job: &JobSpec,
     registry: Arc<ExecutorRegistry>,
-) -> Result<RunResult, String> {
+) -> Result<RunResult, RunnerError> {
     let batches = build_batches(job)?;
     let mut failed = 0usize;
     let mut task_results: Vec<TaskRunResult> = Vec::new();
@@ -216,12 +217,13 @@ pub async fn run_job_with_registry(
                         kind: "run_finished".to_string(),
                         task_id: None,
                     });
-                    return Err(
-                        outcome
+                    return Err(RunnerError::Execution {
+                        code: ErrorCode::ExecutionFailed,
+                        message: outcome
                             .error
                             .clone()
                             .unwrap_or_else(|| "task failed without error".to_string()),
-                    );
+                    });
                 }
                 if let Some(err) = &outcome.error {
                     eprintln!("{err}");
@@ -334,7 +336,7 @@ mod tests {
     async fn run_job_fail_fast_returns_err() {
         let job = mk_job(true, vec![mk_task("a", "unknown", &[])]);
         let err = run_job(&job).await.unwrap_err();
-        assert!(err.contains("unsupported task type"));
+        assert!(err.to_string().contains("unsupported task type"));
     }
 
     #[tokio::test]

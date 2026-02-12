@@ -1,12 +1,13 @@
 use runner_core::domain::{JobSpec, TaskSpec};
+use runner_core::errors::{ErrorCode, RunnerError};
 use std::collections::{HashMap, VecDeque};
 
-pub fn build_plan<'a>(job: &'a JobSpec) -> Result<Vec<&'a TaskSpec>, String> {
+pub fn build_plan<'a>(job: &'a JobSpec) -> Result<Vec<&'a TaskSpec>, RunnerError> {
     let batches = build_batches(job)?;
     Ok(batches.into_iter().flatten().collect())
 }
 
-pub fn build_batches<'a>(job: &'a JobSpec) -> Result<Vec<Vec<&'a TaskSpec>>, String> {
+pub fn build_batches<'a>(job: &'a JobSpec) -> Result<Vec<Vec<&'a TaskSpec>>, RunnerError> {
     // id -> task 引用
     let mut task_map: HashMap<&str, &TaskSpec> = HashMap::new();
     // 每个任务的入度（有多少前置依赖）
@@ -26,10 +27,10 @@ pub fn build_batches<'a>(job: &'a JobSpec) -> Result<Vec<Vec<&'a TaskSpec>>, Str
         for dep in &task.depends_on {
             let dep_id = dep.as_str();
             if !task_map.contains_key(dep_id) {
-                return Err(format!(
-                    "task '{}' depends on unknown task '{}'",
-                    task_id, dep_id
-                ));
+                return Err(RunnerError::Plan {
+                    code: ErrorCode::PlanUnknownDependency,
+                    message: format!("task '{}' depends on unknown task '{}'", task_id, dep_id),
+                });
             }
             graph.entry(dep_id).or_default().push(task_id);
             if let Some(v) = indegree.get_mut(task_id) {
@@ -53,9 +54,10 @@ pub fn build_batches<'a>(job: &'a JobSpec) -> Result<Vec<Vec<&'a TaskSpec>>, Str
         let mut level_ids: Vec<&str> = Vec::with_capacity(level_size);
 
         for _ in 0..level_size {
-            let id = queue
-                .pop_front()
-                .ok_or_else(|| "internal error: empty queue".to_string())?;
+            let id = queue.pop_front().ok_or_else(|| RunnerError::Internal {
+                code: ErrorCode::Internal,
+                message: "internal error: empty queue".to_string(),
+            })?;
             level_ids.push(id);
             visited += 1;
 
@@ -73,16 +75,20 @@ pub fn build_batches<'a>(job: &'a JobSpec) -> Result<Vec<Vec<&'a TaskSpec>>, Str
 
         let mut level_tasks = Vec::with_capacity(level_ids.len());
         for id in level_ids {
-            let task = task_map
-                .get(id)
-                .ok_or_else(|| format!("internal error: missing task '{}'", id))?;
+            let task = task_map.get(id).ok_or_else(|| RunnerError::Internal {
+                code: ErrorCode::Internal,
+                message: format!("internal error: missing task '{}'", id),
+            })?;
             level_tasks.push(*task);
         }
         batches.push(level_tasks);
     }
 
     if visited != job.tasks.len() {
-        return Err("dependency cycle detected".to_string());
+        return Err(RunnerError::Plan {
+            code: ErrorCode::PlanCycle,
+            message: "dependency cycle detected".to_string(),
+        });
     }
 
     Ok(batches)
@@ -167,13 +173,13 @@ mod tests {
     fn build_plan_cycle_err() {
         let j = job(vec![task("a", &["b"]), task("b", &["a"])]);
         let err = build_plan(&j).unwrap_err();
-        assert!(err.contains("cycle"));
+        assert!(err.to_string().contains("cycle"));
     }
 
     #[test]
     fn build_plan_unknown_dep_err() {
         let j = job(vec![task("a", &["missing"])]);
         let err = build_plan(&j).unwrap_err();
-        assert!(err.contains("unknown task"));
+        assert!(err.to_string().contains("unknown task"));
     }
 }

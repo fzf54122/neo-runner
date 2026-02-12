@@ -44,3 +44,4 @@
 - `xtask` 增加 `doctor` 命令，可检查环境与关键路径，支持 `--with-check`。
 - `plugin-spec` 新增外部插件生命周期草案（`on_load/on_init/execute/on_shutdown`）。
 - `runner-infra/config_loader` 已接入结构化错误模型，CLI 会输出错误码以便自动化识别。
+- `runner-app/scheduler` 与 `runner-app/runner` 已迁移到结构化错误返回，计划与执行失败可统一输出错误码。
