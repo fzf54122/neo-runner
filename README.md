@@ -30,11 +30,20 @@ cargo test --workspace
 - 支持任务依赖拓扑排序（含循环依赖检测）
 - 支持 `type: shell` 任务执行
 - 支持超时与重试参数解析（`default_timeout`/`timeout`、`default_retry`/`retry`）
+- CLI 已支持子命令：`run` / `plan` / `validate`
 
 ## 💻 运行示例
 
 ```bash
 cargo run --bin runner-cli -- -f examples/demo.yaml
+```
+
+或使用子命令：
+
+```bash
+cargo run --bin runner-cli -- validate -f examples/demo.yaml
+cargo run --bin runner-cli -- plan -f examples/demo.yaml
+cargo run --bin runner-cli -- run -f examples/demo.yaml
 ```
 
 查看命令参数：

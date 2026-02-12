@@ -4,6 +4,16 @@ mod output;
 use clap::Parser;
 use std::process;
 
+fn load_job_or_exit(file: &str) -> runner_core::domain::JobSpec {
+    match runner_infra::config_loader::load_yaml(file) {
+        Ok(job) => job,
+        Err(err) => {
+            eprintln!("load config failed: {err}");
+            process::exit(2);
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let args = cli::Args::parse();
@@ -12,21 +22,36 @@ async fn main() {
         return;
     }
 
-    let job = match runner_infra::config_loader::load_yaml(&args.file) {
-        Ok(job) => job,
-        Err(err) => {
-            eprintln!("load config failed: {err}");
-            process::exit(2);
+    match args.command.unwrap_or(cli::Command::Run {
+        file: "examples/demo.yaml".to_string(),
+    }) {
+        cli::Command::Validate { file } => {
+            let job = load_job_or_exit(&file);
+            output::print_validate_ok(job.tasks.len());
         }
-    };
-
-    match runner_app::runner::run_job(&job).await {
-        Ok(result) => {
-            output::print_result(result.success, result.total);
+        cli::Command::Plan { file } => {
+            let job = load_job_or_exit(&file);
+            let plan = match runner_app::scheduler::build_plan(&job) {
+                Ok(plan) => plan,
+                Err(err) => {
+                    eprintln!("plan failed: {err}");
+                    process::exit(1);
+                }
+            };
+            let ids: Vec<String> = plan.iter().map(|t| t.id.clone()).collect();
+            output::print_plan(&ids);
         }
-        Err(err) => {
-            eprintln!("run failed: {err}");
-            process::exit(1);
+        cli::Command::Run { file } => {
+            let job = load_job_or_exit(&file);
+            match runner_app::runner::run_job(&job).await {
+                Ok(result) => {
+                    output::print_result(result.success, result.total);
+                }
+                Err(err) => {
+                    eprintln!("run failed: {err}");
+                    process::exit(1);
+                }
+            }
         }
     }
 }

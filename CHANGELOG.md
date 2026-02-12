@@ -10,3 +10,5 @@
 - `runner-app/scheduler` 完成基于 DAG 的拓扑计划生成与环检测。
 - `runner-app/runner` 打通 `shell` 任务执行链路，支持 fail-fast、重试和超时。
 - `runner-cli` 接入配置文件参数 `-f/--file`，可直接执行示例配置。
+- `runner-cli` 增加 `run/plan/validate` 子命令，支持按阶段运行与排查。
+- 新增 `runner-app/scheduler` 单元测试与 `runner-cli` 集成测试，降低回归风险。

@@ -1,5 +1,5 @@
-use std::collections::{HashMap, VecDeque};
 use runner_core::domain::{JobSpec, TaskSpec};
+use std::collections::{HashMap, VecDeque};
 
 pub fn build_plan<'a>(job: &'a JobSpec) -> Result<Vec<&'a TaskSpec>, String> {
     // id -> task 引用
@@ -61,4 +61,65 @@ pub fn build_plan<'a>(job: &'a JobSpec) -> Result<Vec<&'a TaskSpec>, String> {
         return Err("dependency cycle detected".to_string());
     }
     Ok(plan)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use runner_core::domain::RetrySpec;
+
+    fn task(id: &str, deps: &[&str]) -> TaskSpec {
+        TaskSpec {
+            id: id.to_string(),
+            task_type: "shell".to_string(),
+            cmd: Some("echo ok".to_string()),
+            depends_on: deps.iter().map(|d| d.to_string()).collect(),
+            timeout_ms: None,
+            retry: None,
+        }
+    }
+
+    fn job(tasks: Vec<TaskSpec>) -> JobSpec {
+        JobSpec {
+            name: "demo".to_string(),
+            fail_fast: true,
+            max_concurrency: 1,
+            tasks,
+            default_timeout_ms: None,
+            default_retry: RetrySpec { max_attempts: 1 },
+        }
+    }
+
+    #[test]
+    fn build_plan_topological_order() {
+        let j = job(vec![
+            task("test", &["build"]),
+            task("build", &["lint"]),
+            task("lint", &[]),
+        ]);
+
+        let plan = build_plan(&j).expect("plan should build");
+        let ids: Vec<&str> = plan.iter().map(|t| t.id.as_str()).collect();
+
+        let lint_idx = ids.iter().position(|id| *id == "lint").unwrap();
+        let build_idx = ids.iter().position(|id| *id == "build").unwrap();
+        let test_idx = ids.iter().position(|id| *id == "test").unwrap();
+
+        assert!(lint_idx < build_idx);
+        assert!(build_idx < test_idx);
+    }
+
+    #[test]
+    fn build_plan_cycle_err() {
+        let j = job(vec![task("a", &["b"]), task("b", &["a"])]);
+        let err = build_plan(&j).unwrap_err();
+        assert!(err.contains("cycle"));
+    }
+
+    #[test]
+    fn build_plan_unknown_dep_err() {
+        let j = job(vec![task("a", &["missing"])]);
+        let err = build_plan(&j).unwrap_err();
+        assert!(err.contains("unknown task"));
+    }
 }
