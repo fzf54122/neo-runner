@@ -48,7 +48,7 @@ async fn main() {
             let job = load_job_or_exit(&file);
             match runner_app::runner::run_job(&job).await {
                 Ok(result) => {
-                    output::print_result(result.success, result.total, output_format);
+                    output::print_result(&result, output_format);
                 }
                 Err(err) => {
                     eprintln!("run failed: {err}");

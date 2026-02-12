@@ -25,14 +25,14 @@
 4. `cli`：
    - `run / plan / validate` 子命令
    - 全局 `-f/--file` 配置入口
-   - 输出模式：`--output text|json`（`plan/validate` 已支持 JSON）
+   - 输出模式：`--output text|json`（`run/plan/validate` 已支持 JSON）
 
 ### 未完成（离目标还有距离的部分）
 
 1. 事件总线与可观测性：
    - 目前仅命令行输出，尚未形成结构化事件流
 2. 报告层：
-   - `plan/validate` 已支持 JSON，`run` 仍需补齐纯结构化输出与事件汇总
+   - JSON 报告已覆盖 `run/plan/validate`，但事件流与更丰富统计字段仍待补齐
 3. 插件体系完善：
    - 当前执行重点在 `shell`，`http/sql` 仍是骨架
 4. 并发策略深化：
@@ -42,9 +42,9 @@
 
 ### 下一阶段建议（按优先级）
 
-1. 完成 `run` 的 JSON 报告：补任务级结果和失败明细。
-2. 事件流最小化落地：补 `task_started/task_finished/run_finished` 事件模型。
-3. `http` 任务执行 MVP：在现有调度/执行框架内接入第二个任务类型。
+1. 事件流最小化落地：补 `task_started/task_finished/run_finished` 事件模型。
+2. `http` 任务执行 MVP：在现有调度/执行框架内接入第二个任务类型。
+3. 报告层增强：补任务耗时、退出码、分批次统计等字段。
 
 > 说明：后续每一阶段都采用“先补测试，再加实现，再更新 README/CHANGELOG”的节奏，避免反复返工。
 

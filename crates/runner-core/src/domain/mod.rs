@@ -26,6 +26,16 @@ pub struct JobSpec {
 pub struct RunResult {
     pub success: bool,
     pub total: usize,
+    pub failed: usize,
+    pub tasks: Vec<TaskRunResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskRunResult {
+    pub id: String,
+    pub success: bool,
+    pub attempts: u32,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

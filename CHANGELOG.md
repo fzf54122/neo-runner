@@ -17,3 +17,5 @@
 - 新增 `runner-app/runner` 失败策略测试（`fail_fast=true/false`）与批次调度测试。
 - `runner-cli` 增加 `--output text|json` 输出模式，`plan/validate` 支持结构化 JSON 输出。
 - 新增 CLI JSON 输出集成测试，保障自动化场景稳定性。
+- `runner-core` 引入任务级执行结果模型（`TaskRunResult`），`RunResult` 增加 `failed/tasks` 字段。
+- `runner-cli run --output json` 现可输出任务级报告（任务 id、成功状态、尝试次数、错误信息）。

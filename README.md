@@ -34,6 +34,7 @@ cargo test --workspace
 - 执行阶段已接入 `max_concurrency` 并发上限与 `fail_fast` 行为控制
 - CLI 已支持子命令：`run` / `plan` / `validate`
 - CLI 已支持输出格式：`--output text|json`（当前 `plan/validate` 完整支持 JSON）
+- CLI `run` 现已支持 JSON 报告（含任务级执行结果）
 
 ## 💻 运行示例
 
@@ -51,6 +52,7 @@ cargo run --bin runner-cli -- run -f examples/demo.yaml
 # JSON 输出（便于脚本/CI 消费）
 cargo run --bin runner-cli -- validate -f examples/demo.yaml --output json
 cargo run --bin runner-cli -- plan -f examples/demo.yaml --output json
+cargo run --bin runner-cli -- run -f examples/demo.yaml --output json
 ```
 
 查看命令参数：

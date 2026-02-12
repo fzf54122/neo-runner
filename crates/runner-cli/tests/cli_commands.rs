@@ -54,3 +54,25 @@ fn plan_command_json_output() {
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("stdout should be json");
     assert_eq!(v["tasks"][0], "hello");
 }
+
+#[test]
+fn run_command_json_output() {
+    let output = Command::new(env!("CARGO_BIN_EXE_runner-cli"))
+        .args(["run", "-f", &demo_config_path(), "--output", "json"])
+        .output()
+        .expect("failed to execute runner-cli run json");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json_line = stdout
+        .lines()
+        .rev()
+        .find(|line| line.trim_start().starts_with('{'))
+        .expect("stdout should contain json line");
+    let v: serde_json::Value = serde_json::from_str(json_line).expect("json line should parse");
+    assert_eq!(v["success"], true);
+    assert_eq!(v["total"], 1);
+    assert_eq!(v["failed"], 0);
+    assert_eq!(v["tasks"][0]["id"], "hello");
+    assert_eq!(v["tasks"][0]["success"], true);
+}

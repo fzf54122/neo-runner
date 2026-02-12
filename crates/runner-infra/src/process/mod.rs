@@ -9,19 +9,19 @@ pub async fn run_shell(cmd: &str, timeout_ms: Option<u64>) -> Result<i32, String
     let mut command = Command::new("sh");
     command.arg("-c").arg(cmd);
 
-    let status = if let Some(ms) = timeout_ms {
-        timeout(Duration::from_millis(ms), command.status())
+    let output = if let Some(ms) = timeout_ms {
+        timeout(Duration::from_millis(ms), command.output())
             .await
             .map_err(|_| format!("command timed out after {}ms", ms))?
             .map_err(|e| format!("failed to execute shell command: {}", e))?
     } else {
         command
-            .status()
+            .output()
             .await
             .map_err(|e| format!("failed to execute shell command: {}", e))?
     };
 
-    match status.code() {
+    match output.status.code() {
         Some(code) => Ok(code),
         None => Err("process terminated by signal".to_string()),
     }

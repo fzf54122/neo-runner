@@ -1,12 +1,20 @@
 use crate::cli::OutputFormat;
+use runner_core::domain::RunResult;
 
-pub fn print_result(success: bool, total: usize, format: OutputFormat) {
+pub fn print_result(result: &RunResult, format: OutputFormat) {
     match format {
-        OutputFormat::Text => println!("success={success} total={total}"),
+        OutputFormat::Text => {
+            println!(
+                "success={} total={} failed={}",
+                result.success, result.total, result.failed
+            )
+        }
         OutputFormat::Json => {
             let payload = serde_json::json!({
-                "success": success,
-                "total": total,
+                "success": result.success,
+                "total": result.total,
+                "failed": result.failed,
+                "tasks": result.tasks,
             });
             println!("{}", payload);
         }

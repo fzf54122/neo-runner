@@ -1,5 +1,5 @@
 use crate::scheduler::build_batches;
-use runner_core::domain::{JobSpec, RetrySpec, RunResult, TaskSpec};
+use runner_core::domain::{JobSpec, RetrySpec, RunResult, TaskRunResult, TaskSpec};
 use tokio::task::JoinSet;
 
 fn resolve_max_attempts(job: &JobSpec, task: &runner_core::domain::TaskSpec) -> u32 {
@@ -37,39 +37,49 @@ async fn execute_task(task: RunnableTask) -> Result<(), String> {
                 .cmd
                 .as_deref()
                 .ok_or_else(|| format!("task '{}' missing shell cmd", task.id))?;
-
-            let mut last_error: Option<String> = None;
-            for attempt in 1..=task.attempts {
-                println!(
-                    "execute shell task: {} (attempt {}/{})",
-                    task.id, attempt, task.attempts
-                );
-                match runner_infra::process::run_shell(cmd, task.timeout_ms).await {
-                    Ok(0) => {
-                        last_error = None;
-                        break;
-                    }
-                    Ok(code) => {
-                        last_error = Some(format!("task '{}' exited with status {}", task.id, code));
-                    }
-                    Err(err) => {
-                        last_error = Some(format!("task '{}' failed: {}", task.id, err));
-                    }
-                }
-            }
-
-            match last_error {
-                Some(err) => Err(err),
-                None => Ok(()),
+            match runner_infra::process::run_shell(cmd, task.timeout_ms).await {
+                Ok(0) => Ok(()),
+                Ok(code) => Err(format!("task '{}' exited with status {}", task.id, code)),
+                Err(err) => Err(format!("task '{}' failed: {}", task.id, err)),
             }
         }
         other => Err(format!("unsupported task type: {}", other)),
     }
 }
 
-async fn execute_batch(tasks: Vec<RunnableTask>, max_concurrency: usize) -> Vec<(String, Result<(), String>)> {
-    let mut results: Vec<(String, Result<(), String>)> = Vec::new();
-    let mut set: JoinSet<(String, Result<(), String>)> = JoinSet::new();
+async fn execute_task_with_retry(task: RunnableTask) -> TaskRunResult {
+    let mut last_error: Option<String> = None;
+    for attempt in 1..=task.attempts {
+        let once = RunnableTask {
+            attempts: 1,
+            ..task.clone()
+        };
+        match execute_task(once).await {
+            Ok(()) => {
+                return TaskRunResult {
+                    id: task.id,
+                    success: true,
+                    attempts: attempt,
+                    error: None,
+                };
+            }
+            Err(err) => {
+                last_error = Some(err);
+            }
+        }
+    }
+
+    TaskRunResult {
+        id: task.id,
+        success: false,
+        attempts: task.attempts,
+        error: last_error,
+    }
+}
+
+async fn execute_batch(tasks: Vec<RunnableTask>, max_concurrency: usize) -> Vec<TaskRunResult> {
+    let mut results: Vec<TaskRunResult> = Vec::new();
+    let mut set: JoinSet<TaskRunResult> = JoinSet::new();
     let mut idx = 0usize;
     let concurrency = max_concurrency.max(1);
 
@@ -77,20 +87,18 @@ async fn execute_batch(tasks: Vec<RunnableTask>, max_concurrency: usize) -> Vec<
         while set.len() < concurrency && idx < tasks.len() {
             let task = tasks[idx].clone();
             idx += 1;
-            set.spawn(async move {
-                let id = task.id.clone();
-                let outcome = execute_task(task).await;
-                (id, outcome)
-            });
+            set.spawn(async move { execute_task_with_retry(task).await });
         }
 
         if let Some(joined) = set.join_next().await {
             match joined {
                 Ok(result) => results.push(result),
-                Err(err) => results.push((
-                    "<join-error>".to_string(),
-                    Err(format!("task join error: {}", err)),
-                )),
+                Err(err) => results.push(TaskRunResult {
+                    id: "<join-error>".to_string(),
+                    success: false,
+                    attempts: 1,
+                    error: Some(format!("task join error: {}", err)),
+                }),
             }
         }
     }
@@ -111,12 +119,15 @@ pub async fn run() -> RunResult {
     run_job(&job).await.unwrap_or_else(|_| RunResult {
         success: false,
         total: 0,
+        failed: 0,
+        tasks: Vec::new(),
     })
 }
 
 pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
     let batches = build_batches(job)?;
     let mut failed = 0usize;
+    let mut task_results: Vec<TaskRunResult> = Vec::new();
 
     for batch in batches {
         let runnable: Vec<RunnableTask> = batch
@@ -125,20 +136,30 @@ pub async fn run_job(job: &JobSpec) -> Result<RunResult, String> {
             .collect();
 
         let outcomes = execute_batch(runnable, job.max_concurrency).await;
-        for (_id, outcome) in outcomes {
-            if let Err(err) = outcome {
+        for outcome in outcomes {
+            if !outcome.success {
                 if job.fail_fast {
-                    return Err(err);
+                    return Err(
+                        outcome
+                            .error
+                            .clone()
+                            .unwrap_or_else(|| "task failed without error".to_string()),
+                    );
                 }
-                eprintln!("{err}");
+                if let Some(err) = &outcome.error {
+                    eprintln!("{err}");
+                }
                 failed += 1;
             }
+            task_results.push(outcome);
         }
     }
 
     Ok(RunResult {
         success: failed == 0,
         total: job.tasks.len(),
+        failed,
+        tasks: task_results,
     })
 }
 
@@ -184,5 +205,7 @@ mod tests {
         let result = run_job(&job).await.expect("run should not hard fail");
         assert!(!result.success);
         assert_eq!(result.total, 2);
+        assert_eq!(result.failed, 2);
+        assert_eq!(result.tasks.len(), 2);
     }
 }
