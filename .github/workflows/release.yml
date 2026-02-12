@@ -82,9 +82,14 @@ jobs:
       - name: Install UPX
         run: |
           sudo apt-get update
-          sudo apt-get install -y upx-ucl || sudo apt-get install -y upx
+          sudo apt-get install -y musl-tools upx-ucl || sudo apt-get install -y musl-tools upx
+
+      - name: Add Linux musl target
+        run: rustup target add x86_64-unknown-linux-musl
 
       - name: Build Debian package
+        env:
+          NEO_RUNNER_TARGET: x86_64-unknown-linux-musl
         run: cargo run -p xtask -- release
 
       - name: Build Linux binary archive
@@ -224,10 +229,23 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Debug token source
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.RELEASE_PAT }}" ]; then
+            echo "Using RELEASE_PAT"
+          else
+            echo "RELEASE_PAT missing -> fallback to github.token"
+          fi
+          echo "actor=${{ github.actor }}"
+          echo "event=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "ref_type=${{ github.ref_type }}"
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.RELEASE_PAT != '' && secrets.RELEASE_PAT || github.token }}
+          token: ${{ secrets.RELEASE_PAT || github.token }}
           tag_name: ${{ needs.prepare.outputs.release_tag }}
           target_commitish: ${{ github.sha }}
           name: ${{ needs.prepare.outputs.release_name }}

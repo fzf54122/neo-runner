@@ -127,19 +127,34 @@ fn run_doctor(dry_run: bool, with_check: bool) -> Result<(), String> {
 }
 
 fn run_release(dry_run: bool) -> Result<(), String> {
-    run_cmd(
-        dry_run,
-        "cargo",
-        &["build", "-p", "runner-cli", "--release"],
-    )?;
+    let release_target = std::env::var("NEO_RUNNER_TARGET")
+        .unwrap_or_else(|_| "x86_64-unknown-linux-musl".to_string());
 
-    let bin_path = Path::new("target/release/neo-runner");
+    let build_args = [
+        "build",
+        "-p",
+        "runner-cli",
+        "--release",
+        "--target",
+        release_target.as_str(),
+    ];
+
+    run_cmd(dry_run, "cargo", &build_args)?;
+
+    let bin_path = Path::new("target")
+        .join(&release_target)
+        .join("release")
+        .join("neo-runner");
+    let bin_path_str = bin_path
+        .to_str()
+        .ok_or_else(|| "invalid release binary path".to_string())?;
+
     println!("[xtask] verify binary exists: {}", bin_path.display());
     if !dry_run && !bin_path.exists() {
         return Err(format!("release binary missing: {}", bin_path.display()));
     }
 
-    run_cmd(dry_run, "target/release/neo-runner", &["--help"])?;
+    run_cmd(dry_run, bin_path_str, &["--help"])?;
 
     let dist_dir = Path::new("dist");
     let package_version = env!("CARGO_PKG_VERSION");
@@ -150,7 +165,8 @@ fn run_release(dry_run: bool) -> Result<(), String> {
     if dry_run {
         println!("[xtask] dpkg-deb --version");
         println!("[xtask] upx --version");
-        println!("[xtask] upx -9 target/release/neo-runner");
+        println!("[xtask] target: {release_target}");
+        println!("[xtask] upx -9 {bin_path_str}");
         println!("[xtask] include completion: bash/zsh/fish");
         println!("[xtask] package: {deb_path}");
         println!("[xtask] checksum: {checksum_path}");
@@ -159,7 +175,7 @@ fn run_release(dry_run: bool) -> Result<(), String> {
 
     run_cmd(dry_run, "dpkg-deb", &["--version"])?;
     run_cmd(dry_run, "upx", &["--version"])?;
-    run_cmd(dry_run, "upx", &["-9", "target/release/neo-runner"])?;
+    run_cmd(dry_run, "upx", &["-9", bin_path_str])?;
 
     if dist_dir.exists() {
         fs::remove_dir_all(dist_dir)
@@ -193,7 +209,7 @@ fn run_release(dry_run: bool) -> Result<(), String> {
         .map_err(|e| format!("failed to write DEBIAN/control: {}", e))?;
 
     let staged_bin = usr_bin_dir.join("neo-runner");
-    fs::copy(bin_path, &staged_bin)
+    fs::copy(&bin_path, &staged_bin)
         .map_err(|e| format!("failed to stage release binary: {}", e))?;
 
     #[cfg(unix)]
@@ -204,15 +220,15 @@ fn run_release(dry_run: bool) -> Result<(), String> {
             .map_err(|e| format!("failed to set binary permissions: {}", e))?;
     }
 
-    let bash_completion = generate_completion(bin_path, "bash")?;
+    let bash_completion = generate_completion(&bin_path, "bash")?;
     fs::write(bash_completion_dir.join("neo-runner"), bash_completion)
         .map_err(|e| format!("failed to write bash completion: {}", e))?;
 
-    let zsh_completion = generate_completion(bin_path, "zsh")?;
+    let zsh_completion = generate_completion(&bin_path, "zsh")?;
     fs::write(zsh_completion_dir.join("_neo-runner"), zsh_completion)
         .map_err(|e| format!("failed to write zsh completion: {}", e))?;
 
-    let fish_completion = generate_completion(bin_path, "fish")?;
+    let fish_completion = generate_completion(&bin_path, "fish")?;
     fs::write(fish_completion_dir.join("neo-runner.fish"), fish_completion)
         .map_err(|e| format!("failed to write fish completion: {}", e))?;
 

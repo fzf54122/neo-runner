@@ -122,6 +122,7 @@ GitHub `Release` 工作流支持：
 - 发布附件包含：`.deb`、Linux 原生二进制、Windows `.exe`（含 zip 与校验文件）。
 - Release 页面会按 `feat:` / `fix:` 分类显示本次变更。
 - 发布前会使用 `upx -9` 压缩可执行文件以减小体积。
+- Linux 发布二进制基于 `x86_64-unknown-linux-musl` 构建，避免宿主机 `glibc` 版本不兼容。
 
 ## 💻 示例
 
