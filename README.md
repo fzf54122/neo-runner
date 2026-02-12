@@ -94,12 +94,33 @@ cargo xtask check
 cargo xtask test
 cargo xtask ci
 cargo xtask build-release
+cargo xtask release
 cargo xtask doctor
 
 # 仅打印命令，不执行
 cargo xtask --dry-run ci
 cargo xtask --dry-run doctor --with-check
 ```
+
+生成 shell 自动补全：
+
+```bash
+# 生成 zsh 补全脚本
+cargo run --bin neo-runner -- completion zsh > _neo-runner
+
+# 生成 bash 补全脚本
+cargo run --bin neo-runner -- completion bash > neo-runner.bash
+```
+
+`cargo xtask release` 会输出 Debian 包（`dist/neo-runner_*_amd64.deb`）和对应 `sha256` 校验文件。
+安装 `.deb` 后会自动安装补全文件：`bash` / `zsh` / `fish`。
+
+GitHub `Release` 工作流支持：
+
+- 推送 `main` 时，若提交信息包含 `feat:` 或 `fix:` 前缀，会自动打包并发布预发布版本。
+- 推送 `v*` tag 时，自动发布正式版本。
+- 发布附件包含：`.deb`、Linux 原生二进制、Windows `.exe`（含 zip 与校验文件）。
+- Release 页面会按 `feat:` / `fix:` 分类显示本次变更。
 
 ## 💻 示例
 
@@ -135,6 +156,12 @@ SQL 批量导入场景：
 
 ```bash
 cargo run --bin neo-runner -- run -f examples/demo-sql.yaml --output json
+```
+
+综合场景（`shell + http + sql`）：
+
+```bash
+cargo run --bin neo-runner -- run -f examples/demo-all.yaml --output json
 ```
 
 ## 🧪 质量保障

@@ -45,3 +45,12 @@
 - `plugin-spec` 新增外部插件生命周期草案（`on_load/on_init/execute/on_shutdown`）。
 - `runner-infra/config_loader` 已接入结构化错误模型，CLI 会输出错误码以便自动化识别。
 - `runner-app/scheduler` 与 `runner-app/runner` 已迁移到结构化错误返回，计划与执行失败可统一输出错误码。
+- `xtask` 新增 `release` 命令：构建 `neo-runner`、校验可执行并产出发布制品与 `sha256`。
+- 新增综合示例 `examples/demo-all.yaml`，覆盖 `shell + http + sql` 串联场景。
+- `README.en.md` 与中文 README 能力与章节对齐，补充架构分层、路线图与贡献说明。
+- `release` 工作流升级：支持标签触发与手动触发，自动打包并发布 GitHub Release 附件。
+- `xtask release` 改为产出 Debian 包（`dist/neo-runner_*_amd64.deb`）并附带 `sha256` 校验文件。
+- `runner-cli` 新增 `completion` 子命令，可生成 `zsh/bash/fish/powershell/elvish` 自动补全脚本。
+- Debian 包内置并安装 `bash/zsh/fish` 自动补全脚本，安装后即可直接使用补全能力。
+- `release` 工作流新增自动发布策略：`main` 分支出现 `feat:`/`fix:` 提交时自动预发布，`v*` tag 自动正式发布。
+- `release` 附件扩展为 `.deb`、Linux 原生二进制与 Windows `.exe`（含压缩包与校验文件），Release 页面按 `feat`/`fix` 分类展示变更。

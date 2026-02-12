@@ -117,3 +117,17 @@ fn run_sql_command_json_output() {
     assert_eq!(v["success"], true);
     assert_eq!(v["tasks"][0]["id"], "import-users");
 }
+
+#[test]
+fn completion_command_zsh_output() {
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
+        .args(["completion", "zsh"])
+        .output()
+        .expect("failed to execute runner-cli completion zsh");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("#compdef neo-runner"));
+    assert!(stdout.contains("--output"));
+    assert!(stdout.contains("validate"));
+}

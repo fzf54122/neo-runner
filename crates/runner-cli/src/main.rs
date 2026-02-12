@@ -2,6 +2,7 @@ mod cli;
 mod output;
 
 use clap::Parser;
+use clap::CommandFactory;
 use std::process;
 
 fn load_job_or_exit(file: &str) -> runner_core::domain::JobSpec {
@@ -55,6 +56,12 @@ async fn main() {
                     process::exit(1);
                 }
             }
+        }
+        cli::Command::Completion { shell } => {
+            let mut cmd = cli::Args::command();
+            let bin_name = cmd.get_name().to_string();
+            let generator: clap_complete::Shell = shell.into();
+            clap_complete::generate(generator, &mut cmd, bin_name, &mut std::io::stdout());
         }
     }
 }

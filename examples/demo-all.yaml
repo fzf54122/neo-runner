@@ -1,0 +1,28 @@
+version: 1
+job:
+  name: demo-all
+  max_concurrency: 2
+  tasks:
+    - id: hello
+      type: shell
+      cmd: "echo start full pipeline"
+
+    - id: health-a
+      type: http
+      depends_on: [hello]
+      method: GET
+      url: "mock://delay/80/status/200"
+      expected_status: [200]
+
+    - id: health-b
+      type: http
+      depends_on: [hello]
+      method: GET
+      url: "mock://delay/60/status/200"
+      expected_status: [200]
+
+    - id: import-users
+      type: sql
+      depends_on: [health-a, health-b]
+      dsn: sqlite://demo-all.db
+      sql_file: demo-batch.sql
