@@ -17,19 +17,21 @@ fn load_job_or_exit(file: &str) -> runner_core::domain::JobSpec {
 #[tokio::main]
 async fn main() {
     let args = cli::Args::parse();
+    let file = args
+        .file
+        .unwrap_or_else(|| "examples/demo.yaml".to_string());
+
     if args.version {
         println!("neo-runner 0.1.0");
         return;
     }
 
-    match args.command.unwrap_or(cli::Command::Run {
-        file: "examples/demo.yaml".to_string(),
-    }) {
-        cli::Command::Validate { file } => {
+    match args.command.unwrap_or(cli::Command::Run) {
+        cli::Command::Validate => {
             let job = load_job_or_exit(&file);
             output::print_validate_ok(job.tasks.len());
         }
-        cli::Command::Plan { file } => {
+        cli::Command::Plan => {
             let job = load_job_or_exit(&file);
             let plan = match runner_app::scheduler::build_plan(&job) {
                 Ok(plan) => plan,
@@ -41,7 +43,7 @@ async fn main() {
             let ids: Vec<String> = plan.iter().map(|t| t.id.clone()).collect();
             output::print_plan(&ids);
         }
-        cli::Command::Run { file } => {
+        cli::Command::Run => {
             let job = load_job_or_exit(&file);
             match runner_app::runner::run_job(&job).await {
                 Ok(result) => {
