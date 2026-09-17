@@ -13,3 +13,14 @@
 ## 阶段三：插件与工程化完善
 
 完成插件接口稳定化，补齐发布自动化与安全检查流程，形成可持续维护的版本发布与质量保障机制。
+
+## 当前焦点：Agent 完工门禁
+
+把现有编排器包装成 Agent 的 Definition of Done：
+
+- `run --output json` 输出 `ok` / `failed_tasks` / `evidence`
+- 项目循环写在 `.agents/loop.yaml`
+- Claude Code：Skill + Stop hook
+- Codex / DSH：同一份二进制 + `SKILL.md`
+
+不把 neo-runner 做成 MCP，除非目标客户端没有 Bash。

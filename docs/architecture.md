@@ -27,6 +27,12 @@
    - `run / plan / validate` 子命令
    - 全局 `-f/--file` 配置入口
    - 输出模式：`--output text|json`（`run/plan/validate` 已支持 JSON）
+   - Agent 契约字段：`ok` / `failed_tasks` / `evidence` / `duration_ms`
+   - 任务失败时 `run` 退出码为 1
+5. Agent 包装：
+   - `examples/agent-loop.yaml` 循环模板
+   - Claude Code plugin：`skills/` + Stop hook
+   - 契约文档：`docs/agent-contract.md`
 
 ### 未完成（离目标还有距离的部分）
 

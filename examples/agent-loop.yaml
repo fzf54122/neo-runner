@@ -1,0 +1,19 @@
+# Agent completion loop. Copy to .agents/loop.yaml and replace the
+# commands with the project's real fmt/test/lint gates.
+# neo-runner run -f .agents/loop.yaml --output json
+# Exit 0 and ok:true are the only "done" signals an agent may trust.
+version: 1
+job:
+  name: agent-loop
+  fail_fast: true
+  max_concurrency: 1
+  default_timeout: 30s
+  tasks:
+    - id: fmt
+      type: shell
+      cmd: "echo fmt-ok"
+
+    - id: test
+      type: shell
+      depends_on: [fmt]
+      cmd: "echo test-ok"

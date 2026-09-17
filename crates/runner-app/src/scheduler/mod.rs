@@ -2,12 +2,12 @@ use runner_core::domain::{JobSpec, TaskSpec};
 use runner_core::errors::{ErrorCode, RunnerError};
 use std::collections::{HashMap, VecDeque};
 
-pub fn build_plan<'a>(job: &'a JobSpec) -> Result<Vec<&'a TaskSpec>, RunnerError> {
+pub fn build_plan(job: &JobSpec) -> Result<Vec<&TaskSpec>, RunnerError> {
     let batches = build_batches(job)?;
     Ok(batches.into_iter().flatten().collect())
 }
 
-pub fn build_batches<'a>(job: &'a JobSpec) -> Result<Vec<Vec<&'a TaskSpec>>, RunnerError> {
+pub fn build_batches(job: &JobSpec) -> Result<Vec<Vec<&TaskSpec>>, RunnerError> {
     // id -> task 引用
     let mut task_map: HashMap<&str, &TaskSpec> = HashMap::new();
     // 每个任务的入度（有多少前置依赖）

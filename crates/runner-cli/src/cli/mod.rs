@@ -1,7 +1,10 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Parser)]
-#[command(name = "neo-runner", about = "A pluggable job runner")]
+#[command(
+    name = "neo-runner",
+    about = "Agent completion gate: YAML loops, JSON evidence, exit 0 only when green"
+)]
 pub struct Args {
     #[arg(long)]
     pub version: bool,

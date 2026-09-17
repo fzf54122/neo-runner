@@ -11,7 +11,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-version = "0.1.0"
+version = "0.2.0"
 license = "MIT"
 repository = "https://github.com/fzf54122/neo-runner"
 
@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "ti
 tracing = "0.1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
+tempfile = "3"
 
 [profile.release]
 opt-level = "z"     # 或 "s"，z 更极致体积

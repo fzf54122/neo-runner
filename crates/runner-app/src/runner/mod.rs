@@ -2,10 +2,10 @@ use crate::eventbus::{EventBus, InMemoryEventCollector};
 use crate::executor::{ExecutionResult, ExecutorRegistry};
 use crate::scheduler::build_batches;
 use runner_core::domain::{
-    BatchSummary, FailureGroup, JobSpec, RetryDistributionItem, RetrySpec, RunEvent, RunResult,
-    TaskRunResult, TaskSpec,
+    BatchSummary, EvidenceItem, FailureGroup, JobSpec, RetryDistributionItem, RetrySpec, RunEvent,
+    RunResult, TaskRunResult, TaskSpec,
 };
-use runner_core::errors::{ErrorCode, RunnerError};
+use runner_core::errors::RunnerError;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
@@ -33,7 +33,10 @@ impl RunnableTask {
     }
 }
 
-async fn execute_task_with_retry(registry: Arc<ExecutorRegistry>, task: RunnableTask) -> TaskRunResult {
+async fn execute_task_with_retry(
+    registry: Arc<ExecutorRegistry>,
+    task: RunnableTask,
+) -> TaskRunResult {
     let mut last: Option<(ExecutionResult, u128)> = None;
 
     for attempt in 1..=task.attempts {
@@ -47,6 +50,7 @@ async fn execute_task_with_retry(registry: Arc<ExecutorRegistry>, task: Runnable
                 success: true,
                 attempts: attempt,
                 error: None,
+                excerpt: result.excerpt,
                 duration_ms: elapsed,
                 exit_code: result.exit_code,
                 status_code: result.status_code,
@@ -66,6 +70,7 @@ async fn execute_task_with_retry(registry: Arc<ExecutorRegistry>, task: Runnable
         success: false,
         attempts: task.attempts,
         error: fallback.error,
+        excerpt: fallback.excerpt,
         duration_ms: elapsed,
         exit_code: fallback.exit_code,
         status_code: fallback.status_code,
@@ -98,6 +103,7 @@ async fn execute_batch(
                     success: false,
                     attempts: 1,
                     error: Some(format!("task join error: {}", err)),
+                    excerpt: None,
                     duration_ms: 0,
                     exit_code: None,
                     status_code: None,
@@ -154,6 +160,9 @@ pub async fn run() -> RunResult {
         success: false,
         total: 0,
         failed: 0,
+        duration_ms: 0,
+        failed_tasks: Vec::new(),
+        evidence: Vec::new(),
         tasks: Vec::new(),
         events: Vec::new(),
         batches: Vec::new(),
@@ -171,6 +180,7 @@ pub async fn run_job_with_registry(
     job: &JobSpec,
     registry: Arc<ExecutorRegistry>,
 ) -> Result<RunResult, RunnerError> {
+    let started_at = Instant::now();
     let batches = build_batches(job)?;
     let mut failed = 0usize;
     let mut task_results: Vec<TaskRunResult> = Vec::new();
@@ -217,12 +227,24 @@ pub async fn run_job_with_registry(
                         kind: "run_finished".to_string(),
                         task_id: None,
                     });
-                    return Err(RunnerError::Execution {
-                        code: ErrorCode::ExecutionFailed,
-                        message: outcome
-                            .error
-                            .clone()
-                            .unwrap_or_else(|| "task failed without error".to_string()),
+                    task_results.push(outcome);
+                    let retry_distribution = build_retry_distribution(&task_results);
+                    let failure_groups = build_failure_groups(&task_results);
+                    let events = probe.snapshot();
+                    let failed_tasks = failed_task_ids(&task_results);
+                    let evidence = build_evidence(&task_results);
+                    return Ok(RunResult {
+                        success: false,
+                        total: job.tasks.len(),
+                        failed: failed_tasks.len(),
+                        duration_ms: started_at.elapsed().as_millis(),
+                        failed_tasks,
+                        evidence,
+                        tasks: task_results,
+                        events,
+                        batches: batch_summaries,
+                        retry_distribution,
+                        failure_groups,
                     });
                 }
                 if let Some(err) = &outcome.error {
@@ -250,16 +272,48 @@ pub async fn run_job_with_registry(
     let failure_groups = build_failure_groups(&task_results);
     let events = probe.snapshot();
 
+    let failed_tasks = failed_task_ids(&task_results);
     Ok(RunResult {
         success: failed == 0,
         total: job.tasks.len(),
         failed,
+        duration_ms: started_at.elapsed().as_millis(),
+        failed_tasks,
+        evidence: build_evidence(&task_results),
         tasks: task_results,
         events,
         batches: batch_summaries,
         retry_distribution,
         failure_groups,
     })
+}
+
+fn failed_task_ids(tasks: &[TaskRunResult]) -> Vec<String> {
+    let mut ids: Vec<String> = tasks
+        .iter()
+        .filter(|task| !task.success)
+        .map(|task| task.id.clone())
+        .collect();
+    ids.sort();
+    ids
+}
+
+fn build_evidence(tasks: &[TaskRunResult]) -> Vec<EvidenceItem> {
+    let mut evidence: Vec<EvidenceItem> = tasks
+        .iter()
+        .filter(|task| !task.success)
+        .map(|task| EvidenceItem {
+            task: task.id.clone(),
+            exit_code: task.exit_code,
+            excerpt: task
+                .excerpt
+                .clone()
+                .or_else(|| task.error.clone())
+                .unwrap_or_else(|| "task failed without evidence".to_string()),
+        })
+        .collect();
+    evidence.sort_by(|a, b| a.task.cmp(&b.task));
+    evidence
 }
 
 #[cfg(test)]
@@ -270,7 +324,11 @@ mod tests {
         mk_job_with_concurrency(fail_fast, 2, tasks)
     }
 
-    fn mk_job_with_concurrency(fail_fast: bool, max_concurrency: usize, tasks: Vec<TaskSpec>) -> JobSpec {
+    fn mk_job_with_concurrency(
+        fail_fast: bool,
+        max_concurrency: usize,
+        tasks: Vec<TaskSpec>,
+    ) -> JobSpec {
         JobSpec {
             name: "demo".to_string(),
             fail_fast,
@@ -333,10 +391,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn run_job_fail_fast_returns_err() {
+    async fn run_job_fail_fast_returns_structured_failure() {
         let job = mk_job(true, vec![mk_task("a", "unknown", &[])]);
-        let err = run_job(&job).await.unwrap_err();
-        assert!(err.to_string().contains("unsupported task type"));
+        let result = run_job(&job)
+            .await
+            .expect("fail-fast should return a result");
+        assert!(!result.success);
+        assert_eq!(result.failed_tasks, vec!["a".to_string()]);
+        assert_eq!(result.evidence.len(), 1);
+        assert_eq!(result.evidence[0].task, "a");
+        assert!(result.evidence[0].excerpt.contains("unsupported task type"));
     }
 
     #[tokio::test]
@@ -352,13 +416,32 @@ mod tests {
         assert_eq!(result.tasks.len(), 2);
         assert!(!result.failure_groups.is_empty());
         assert!(!result.retry_distribution.is_empty());
+        assert_eq!(result.failed_tasks, vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(result.evidence.len(), 2);
         assert!(result.events.iter().any(|e| e.kind == "run_started"));
         assert!(result.events.iter().any(|e| e.kind == "run_finished"));
     }
 
     #[tokio::test]
+    async fn run_job_captures_shell_evidence_on_failure() {
+        let mut task = mk_task("boom", "shell", &[]);
+        task.cmd = Some("echo boom-evidence >&2; exit 9".to_string());
+        let job = mk_job(true, vec![task]);
+        let result = run_job(&job)
+            .await
+            .expect("failed shell should still return a result");
+        assert!(!result.success);
+        assert_eq!(result.failed_tasks, vec!["boom".to_string()]);
+        assert_eq!(result.evidence[0].exit_code, Some(9));
+        assert!(result.evidence[0].excerpt.contains("boom-evidence"));
+    }
+
+    #[tokio::test]
     async fn run_job_http_task_success() {
-        let job = mk_job(true, vec![mk_http_task("health", "GET", "https://example.com")]);
+        let job = mk_job(
+            true,
+            vec![mk_http_task("health", "GET", "https://example.com")],
+        );
         let result = run_job(&job).await.expect("http task should succeed");
         assert!(result.success);
         assert_eq!(result.total, 1);

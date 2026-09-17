@@ -28,11 +28,16 @@ pub struct JobSpec {
     pub default_retry: RetrySpec,
 }
 
+pub const EVIDENCE_EXCERPT_MAX_CHARS: usize = 2000;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunResult {
     pub success: bool,
     pub total: usize,
     pub failed: usize,
+    pub duration_ms: u128,
+    pub failed_tasks: Vec<String>,
+    pub evidence: Vec<EvidenceItem>,
     pub tasks: Vec<TaskRunResult>,
     pub events: Vec<RunEvent>,
     pub batches: Vec<BatchSummary>,
@@ -46,9 +51,28 @@ pub struct TaskRunResult {
     pub success: bool,
     pub attempts: u32,
     pub error: Option<String>,
+    pub excerpt: Option<String>,
     pub duration_ms: u128,
     pub exit_code: Option<i32>,
     pub status_code: Option<u16>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct EvidenceItem {
+    pub task: String,
+    pub exit_code: Option<i32>,
+    pub excerpt: String,
+}
+
+pub fn clip_excerpt(input: &str, max_chars: usize) -> String {
+    let trimmed = input.trim();
+    let total = trimmed.chars().count();
+    if total <= max_chars {
+        return trimmed.to_string();
+    }
+    let skip = total.saturating_sub(max_chars);
+    let tail: String = trimmed.chars().skip(skip).collect();
+    format!("…{tail}")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,4 +105,20 @@ pub struct FailureGroup {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetrySpec {
     pub max_attempts: u32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clip_excerpt_keeps_short_text() {
+        assert_eq!(clip_excerpt("  hello  ", 10), "hello");
+    }
+
+    #[test]
+    fn clip_excerpt_keeps_tail_of_long_text() {
+        let excerpt = clip_excerpt("abcdefg", 3);
+        assert_eq!(excerpt, "…efg");
+    }
 }

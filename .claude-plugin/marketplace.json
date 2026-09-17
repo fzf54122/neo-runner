@@ -1,0 +1,19 @@
+{
+  "name": "neo-runner",
+  "owner": {
+    "name": "fzf"
+  },
+  "description": "Agent completion gate for Claude Code, Codex, and DeepSeek Harness",
+  "plugins": [
+    {
+      "name": "neo-runner",
+      "source": "./",
+      "description": "YAML loop runner with JSON evidence. Agents may not claim done unless neo-runner exits 0.",
+      "homepage": "https://fzf54122.github.io/neo-runner/",
+      "repository": "https://github.com/fzf54122/neo-runner",
+      "license": "MIT",
+      "category": "development",
+      "tags": ["agent-skills", "hooks", "ci", "loop"]
+    }
+  ]
+}
