@@ -58,7 +58,9 @@ mod tests {
 
     #[tokio::test]
     async fn request_mock_status_ok() {
-        let code = request("GET", "mock://status/204").await.expect("mock status should work");
+        let code = request("GET", "mock://status/204")
+            .await
+            .expect("mock status should work");
         assert_eq!(code, 204);
     }
 
