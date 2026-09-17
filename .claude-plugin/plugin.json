@@ -16,6 +16,5 @@
     "loop",
     "neo-runner"
   ],
-  "hooks": "./hooks/hooks.json",
   "skills": "./skills/"
 }
