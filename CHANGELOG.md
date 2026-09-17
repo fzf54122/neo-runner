@@ -5,7 +5,7 @@
 ## [Unreleased]
 
 - Claude plugin 不再在 `plugin.json` 里重复声明 `hooks/hooks.json`（该文件会自动加载）。
-- 官网改为推到 `gh-pages` 分支，避免 Actions 无法创建 Pages 站点。
+- 官网改为 GitHub Actions 的 `deploy-pages` 正式部署。
 
 ## [0.2.0] - 2026-09-17
 
