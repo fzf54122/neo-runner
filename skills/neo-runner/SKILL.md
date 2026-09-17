@@ -12,9 +12,9 @@ description: Enforce agent completion with neo-runner. Use when the user asks if
 If `neo-runner` is missing:
 
 ```bash
-cargo install --path crates/runner-cli --bin neo-runner
-# or from GitHub:
-# cargo install --git https://github.com/fzf54122/neo-runner --bin neo-runner
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash
+# fallback:
+# cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
 ```
 
 ## Default command

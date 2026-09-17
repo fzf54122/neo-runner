@@ -10,10 +10,12 @@
 
 [![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org/)
 [![Binary](https://img.shields.io/badge/Binary-neo--runner-2ea043.svg)](crates/runner-cli)
+[![Release](https://img.shields.io/github/v/release/fzf54122/neo-runner.svg)](https://github.com/fzf54122/neo-runner/releases)
 [![CI](https://img.shields.io/badge/CI-fmt%20%7C%20clippy%20%7C%20test-4c9aff.svg)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-f2c94c.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/fzf54122/neo-runner?style=social)](https://github.com/fzf54122/neo-runner/stargazers)
 
-[⚡ 快速开始](#-快速开始) • [🔌 Claude Code](#-在-claude-code-里用) • [✨ 关键能力](#-关键能力) • [📊 能力矩阵](#-能力矩阵) • [💻 示例](#-示例) • [🧪 质量保障](#-质量保障)
+[官网](https://fzf54122.github.io/neo-runner/) • [⚡ 安装](#-安装) • [🔌 Claude Code](#-在-claude-code-里用) • [✨ 关键能力](#-关键能力) • [⭐ Star 历史](#-star-历史)
 
 </div>
 
@@ -27,13 +29,52 @@
 - 🛡️ **红灯不准撒谎**：`ok: false` 时 Agent 不得说「已完成」。
 - 📈 **JSON 证据**：`failed_tasks` + `evidence[].excerpt` 告诉下一步改什么。
 
-```bash
-bash scripts/install.sh
-cp examples/agent-loop.yaml .agents/loop.yaml   # 按项目改命令
-neo-runner run -f .agents/loop.yaml --output json
-```
+官网：[https://fzf54122.github.io/neo-runner/](https://fzf54122.github.io/neo-runner/)
 
 契约说明见 [docs/agent-contract.md](docs/agent-contract.md)，安装见 [docs/harness.md](docs/harness.md)。
+
+## ⚡ 安装
+
+用户不需要这份仓库的本地代码。二进制、plugin、循环模板都从 GitHub 取。
+
+### 二进制
+
+Release 工作流会打出 Linux / Windows 附件，直接下载即可，不必克隆仓库：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash
+neo-runner --version
+```
+
+或手动取 [GitHub Releases](https://github.com/fzf54122/neo-runner/releases/tag/v0.2.0) 里的文件：
+
+- Linux：`neo-runner-linux-x86_64.tar.gz`（解压后改名为 `neo-runner` 放进 `PATH`）
+- Debian/Ubuntu：`neo-runner_*_amd64.deb`
+- Windows：`neo-runner.exe` / `neo-runner-windows-x86_64.zip`
+
+没有预编译包、或要自己编时：
+
+```bash
+cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
+```
+
+### 项目循环文件
+
+```bash
+mkdir -p .agents
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/examples/agent-loop.yaml \
+  -o .agents/loop.yaml
+```
+
+把里面的 `echo fmt-ok` / `echo test-ok` 换成这个项目真正的门禁，例如 `cargo test`、`uv run pytest`、`pnpm test`。
+
+没有 `.agents/loop.yaml` 时 hook 会 skip，不会误拦普通项目。
+
+确认：
+
+```bash
+neo-runner run -f .agents/loop.yaml --output json
+```
 
 ## 🔌 在 Claude Code 里用
 
@@ -45,63 +86,20 @@ neo-runner run -f .agents/loop.yaml --output json
 | Skill | 告诉模型完工前必须跑哪条命令、怎么读 JSON |
 | Stop hook | 项目里有 `.agents/loop.yaml` 时，会话结束前强制再跑一遍；红灯就拦 |
 
-### 1. 装二进制
-
-```bash
-bash scripts/install.sh
-neo-runner --version
-```
-
-### 2. 给项目一份循环文件
-
-```bash
-mkdir -p .agents
-cp examples/agent-loop.yaml .agents/loop.yaml
-```
-
-把里面的 `echo fmt-ok` / `echo test-ok` 换成这个项目真正的门禁，例如：
-
-```yaml
-version: 1
-job:
-  name: agent-loop
-  fail_fast: true
-  tasks:
-    - id: fmt
-      type: shell
-      cmd: "cargo fmt --all -- --check"
-    - id: test
-      type: shell
-      depends_on: [fmt]
-      cmd: "cargo test --workspace"
-```
-
-没有 `.agents/loop.yaml` 时 hook 会 skip，不会误拦普通项目。
-
-### 3. 装 plugin
-
-仓库已推到 GitHub 后：
+在 Claude Code 对话框里输入：
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
 /plugin install neo-runner
 ```
 
-本机开发、还没 marketplace 时：
+然后对 Claude 说：
 
 ```text
-/plugin marketplace add /path/to/neo-runner
-/plugin install neo-runner
+用 neo-runner 验收一下，别口头说通过。
 ```
 
-只想给当前项目一份 Skill、不走 marketplace：
-
-```bash
-mkdir -p .claude/skills/neo-runner
-cp skills/neo-runner/SKILL.md .claude/skills/neo-runner/SKILL.md
-```
-
-### 4. 模型实际跑什么
+模型会跑：
 
 ```bash
 neo-runner run -f .agents/loop.yaml --output json
@@ -111,11 +109,7 @@ neo-runner run -f .agents/loop.yaml --output json
 - 退出码 `1`：红灯。JSON 仍在 stdout，读 `failed_tasks` 和 `evidence[].excerpt` 再改
 - 退出码 `2`：配置缺失或 YAML 加载失败
 
-也可以直接对 Claude 说：
-
-```text
-用 neo-runner 验收一下，别口头说通过。
-```
+`/plugin` 能看到 `neo-runner` 已启用即加载成功。plugin 装一次是用户级的，每个项目只要有自己的 `.agents/loop.yaml`。
 
 ## ✨ 关键能力
 
@@ -176,10 +170,10 @@ cargo build -p runner-cli --release
 ./target/release/neo-runner --help
 ```
 
-本地安装（写入 `~/.cargo/bin`）：
+从本仓库源码安装（开发者）：
 
 ```bash
-bash scripts/install.sh
+cargo install --path crates/runner-cli --bin neo-runner
 neo-runner --help
 ```
 
@@ -298,8 +292,13 @@ CI 质量门禁：
 - 📌 事件系统：从最小事件流升级到可订阅 eventbus
 - 📌 插件工程化：统一注册机制与能力声明
 
+## ⭐ Star 历史
+
+[![Star History Chart](https://api.star-history.com/chart?repos=fzf54122/neo-runner&type=Date)](https://www.star-history.com/#fzf54122/neo-runner&Date)
+
 ## 🔐 安全与版本
 
+- 官网：<https://fzf54122.github.io/neo-runner/>
 - 安全策略：`SECURITY.md`
 - 变更日志：`CHANGELOG.md`
 

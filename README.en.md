@@ -10,10 +10,12 @@
 
 [![Rust](https://img.shields.io/badge/Rust-2021-orange.svg)](https://www.rust-lang.org/)
 [![Binary](https://img.shields.io/badge/Binary-neo--runner-2ea043.svg)](crates/runner-cli)
+[![Release](https://img.shields.io/github/v/release/fzf54122/neo-runner.svg)](https://github.com/fzf54122/neo-runner/releases)
 [![CI](https://img.shields.io/badge/CI-fmt%20%7C%20clippy%20%7C%20test-4c9aff.svg)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-f2c94c.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/fzf54122/neo-runner?style=social)](https://github.com/fzf54122/neo-runner/stargazers)
 
-[Quick Start](#-quick-start) • [Claude Code](#-use-with-claude-code) • [Capabilities](#-capabilities) • [Capability Matrix](#-capability-matrix) • [Examples](#-examples) • [Quality](#-quality)
+[Website](https://fzf54122.github.io/neo-runner/) • [Install](#-install) • [Claude Code](#-use-with-claude-code) • [Star History](#-star-history)
 
 </div>
 
@@ -27,13 +29,52 @@ The engine is still the original Rust orchestrator (DAG, retries, timeouts, conc
 - 🛡️ **Red means not done**: if `ok` is `false`, the agent must not claim completion.
 - 📈 **JSON evidence**: `failed_tasks` + `evidence[].excerpt` tell it what to fix next.
 
-```bash
-bash scripts/install.sh
-cp examples/agent-loop.yaml .agents/loop.yaml   # replace commands for your repo
-neo-runner run -f .agents/loop.yaml --output json
-```
+Website: [https://fzf54122.github.io/neo-runner/](https://fzf54122.github.io/neo-runner/)
 
 See [docs/agent-contract.md](docs/agent-contract.md) and [docs/harness.md](docs/harness.md).
+
+## ⚡ Install
+
+Users do not need a local clone. Binary, plugin, and loop template all come from GitHub.
+
+### Binary
+
+The release workflow publishes Linux and Windows artifacts. Download them; no clone needed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash
+neo-runner --version
+```
+
+Or grab files from [GitHub Releases](https://github.com/fzf54122/neo-runner/releases/tag/v0.2.0):
+
+- Linux: `neo-runner-linux-x86_64.tar.gz` (rename the binary to `neo-runner` and put it on `PATH`)
+- Debian/Ubuntu: `neo-runner_*_amd64.deb`
+- Windows: `neo-runner.exe` / `neo-runner-windows-x86_64.zip`
+
+If there is no prebuilt asset, or you want to compile:
+
+```bash
+cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
+```
+
+### Project loop file
+
+```bash
+mkdir -p .agents
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/examples/agent-loop.yaml \
+  -o .agents/loop.yaml
+```
+
+Replace `echo fmt-ok` / `echo test-ok` with this project's real gates (`cargo test`, `uv run pytest`, `pnpm test`, …).
+
+If `.agents/loop.yaml` is missing, the hook skips. It will not intercept ordinary projects.
+
+Verify:
+
+```bash
+neo-runner run -f .agents/loop.yaml --output json
+```
 
 ## 🔌 Use with Claude Code
 
@@ -45,63 +86,20 @@ Three pieces, not MCP:
 | Skill | Tells the model which command to run and how to read JSON |
 | Stop hook | If the project has `.agents/loop.yaml`, force a rerun before the session ends; red blocks completion |
 
-### 1. Install the binary
-
-```bash
-bash scripts/install.sh
-neo-runner --version
-```
-
-### 2. Add a loop file to the project
-
-```bash
-mkdir -p .agents
-cp examples/agent-loop.yaml .agents/loop.yaml
-```
-
-Replace `echo fmt-ok` / `echo test-ok` with the project's real gates, for example:
-
-```yaml
-version: 1
-job:
-  name: agent-loop
-  fail_fast: true
-  tasks:
-    - id: fmt
-      type: shell
-      cmd: "cargo fmt --all -- --check"
-    - id: test
-      type: shell
-      depends_on: [fmt]
-      cmd: "cargo test --workspace"
-```
-
-If `.agents/loop.yaml` is missing, the hook skips. It will not intercept ordinary projects.
-
-### 3. Install the plugin
-
-After the repo is on GitHub:
+In the Claude Code prompt:
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
 /plugin install neo-runner
 ```
 
-Local development, before a marketplace exists:
+Then tell Claude:
 
 ```text
-/plugin marketplace add /path/to/neo-runner
-/plugin install neo-runner
+Verify with neo-runner. Do not claim it passed verbally.
 ```
 
-Project-level Skill only, no marketplace:
-
-```bash
-mkdir -p .claude/skills/neo-runner
-cp skills/neo-runner/SKILL.md .claude/skills/neo-runner/SKILL.md
-```
-
-### 4. What the model actually runs
+The model runs:
 
 ```bash
 neo-runner run -f .agents/loop.yaml --output json
@@ -111,11 +109,7 @@ neo-runner run -f .agents/loop.yaml --output json
 - Exit `1`: red. JSON is still on stdout; read `failed_tasks` and `evidence[].excerpt`
 - Exit `2`: missing config or YAML failed to load
 
-You can also tell Claude:
-
-```text
-Verify with neo-runner. Do not claim it passed verbally.
-```
+`/plugin` should list `neo-runner` as enabled. The plugin is user-level; each project only needs its own `.agents/loop.yaml`.
 
 ## ✨ Capabilities
 
@@ -173,10 +167,10 @@ cargo build -p runner-cli --release
 ./target/release/neo-runner --help
 ```
 
-Install locally (`~/.cargo/bin`):
+Install from this source tree (developers):
 
 ```bash
-bash scripts/install.sh
+cargo install --path crates/runner-cli --bin neo-runner
 neo-runner --help
 ```
 
@@ -283,8 +277,13 @@ cargo test -p runner-cli
 - 📌 Event evolution: from minimal lifecycle events to richer subscriptions.
 - 📌 Plugin engineering: capability declaration and external plugin runtime path.
 
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=fzf54122/neo-runner&type=Date)](https://www.star-history.com/#fzf54122/neo-runner&Date)
+
 ## 🔐 Security & Versioning
 
+- Website: <https://fzf54122.github.io/neo-runner/>
 - Security policy: `SECURITY.md`
 - Changelog: `CHANGELOG.md`
 

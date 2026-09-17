@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<!--
+@Time    : 2026/9/17 13:20
+@Author  : fzf
+@FileName: index.html
+@Software: neo-runner
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>neo-runner — Agent 说做完了不算</title>
+  <meta name="description" content="给编码 Agent 的完工门禁。YAML 描述循环，JSON 给出证据，只有退出码 0 才允许声称完成。" />
+  <link rel="canonical" href="https://fzf54122.github.io/neo-runner/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #f4efe4;
+      --muted: #b7b09f;
+      --paper: #12110e;
+      --panel: #1b1a16;
+      --line: rgba(244, 239, 228, 0.12);
+      --ok: #b6f25a;
+      --stop: #ff5d3a;
+      --accent: #e6c35c;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(182, 242, 90, 0.08), transparent 50%),
+        radial-gradient(900px 400px at 100% 0%, rgba(255, 93, 58, 0.08), transparent 45%),
+        var(--paper);
+      color: var(--ink);
+      font-family: Newsreader, "Iowan Old Style", Georgia, serif;
+      line-height: 1.5;
+    }
+    a { color: var(--accent); }
+    .wrap { width: min(1080px, calc(100% - 40px)); margin: 0 auto; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 28px 0 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .mark {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+    nav { display: flex; gap: 18px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+    nav a { color: var(--muted); text-decoration: none; }
+    nav a:hover { color: var(--ink); }
+    .hero { padding: 72px 0 36px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: end; }
+    h1 {
+      font-size: clamp(40px, 7vw, 84px);
+      line-height: 0.92;
+      margin: 0 0 18px;
+      letter-spacing: -0.04em;
+    }
+    .lede { font-size: 22px; color: var(--muted); max-width: 34ch; }
+    .gate {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 22px;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 13px;
+      box-shadow: 16px 16px 0 rgba(0,0,0,0.28);
+    }
+    .ok { color: var(--ok); }
+    .stop { color: var(--stop); }
+    .kicker {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    section { padding: 56px 0; border-top: 1px solid var(--line); }
+    h2 { font-size: 36px; margin: 0 0 18px; letter-spacing: -0.03em; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    article {
+      background: var(--panel);
+      padding: 22px;
+      border-left: 3px solid var(--accent);
+    }
+    article h3 { margin: 0 0 10px; font-size: 22px; }
+    pre {
+      overflow: auto;
+      background: #0c0b09;
+      color: #d7f7a6;
+      padding: 16px;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 12.5px;
+      border: 1px solid var(--line);
+    }
+    .chart { background: #fff; padding: 12px; }
+    .chart img { width: 100%; height: auto; display: block; }
+    footer {
+      padding: 28px 0 48px;
+      color: var(--muted);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 800px) {
+      .hero, .steps { grid-template-columns: 1fr; }
+      header, footer { display: block; }
+      nav { margin-top: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="mark">neo-runner / v0.2.0</div>
+      <nav>
+        <a href="https://github.com/fzf54122/neo-runner">GitHub</a>
+        <a href="https://github.com/fzf54122/neo-runner/releases">Releases</a>
+        <a href="https://github.com/fzf54122/neo-runner#-%E5%AE%89%E8%A3%85">安装</a>
+      </nav>
+    </header>
+
+    <div class="hero">
+      <div>
+        <p class="kicker">Definition of Done for agents</p>
+        <h1>Agent 说做完了，<br />不算。</h1>
+        <p class="lede">YAML 描述循环，JSON 给出证据。只有退出码 0 才允许声称完成。二进制 + Skill + Hook，不是 MCP。</p>
+      </div>
+      <div class="gate" aria-label="completion contract">
+        <div class="ok">ok: true</div>
+        <div>failed_tasks: []</div>
+        <div>evidence: []</div>
+        <div style="margin-top:14px;color:var(--muted)">exit 0 is the only green signal</div>
+        <div class="stop" style="margin-top:10px">ok: false → 不准说做完</div>
+      </div>
+    </div>
+
+    <section>
+      <p class="kicker">Install from GitHub</p>
+      <h2>用户不需要本地克隆</h2>
+      <div class="steps">
+        <article>
+          <h3>1. 二进制</h3>
+          <pre>curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash</pre>
+        </article>
+        <article>
+          <h3>2. 循环文件</h3>
+          <pre>mkdir -p .agents
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/examples/agent-loop.yaml \
+  -o .agents/loop.yaml</pre>
+        </article>
+        <article>
+          <h3>3. Claude Code</h3>
+          <pre>/plugin marketplace add fzf54122/neo-runner
+/plugin install neo-runner</pre>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <p class="kicker">Contract</p>
+      <h2>模型实际跑什么</h2>
+      <pre>neo-runner run -f .agents/loop.yaml --output json</pre>
+      <p>退出码 0 且 <code>ok: true</code> 才是绿灯。红灯时读 <code>failed_tasks</code> 和 <code>evidence[].excerpt</code>，改完再跑。没有 loop 文件时 hook 会跳过。</p>
+    </section>
+
+    <section>
+      <p class="kicker">Traction</p>
+      <h2>Star 历史</h2>
+      <div class="chart">
+        <a href="https://www.star-history.com/#fzf54122/neo-runner&amp;Date">
+          <img src="https://api.star-history.com/chart?repos=fzf54122/neo-runner&type=Date" alt="neo-runner GitHub star history line chart" />
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      <span>MIT · fzf54122/neo-runner</span>
+      <span><a href="https://github.com/fzf54122/neo-runner">源码</a> · <a href="https://github.com/fzf54122/neo-runner/blob/main/README.md">中文 README</a> · <a href="https://github.com/fzf54122/neo-runner/blob/main/README.en.md">English</a></span>
+    </footer>
+  </div>
+</body>
+</html>

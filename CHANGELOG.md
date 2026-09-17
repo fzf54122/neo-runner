@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-17
+
 - Agent 完工契约：`run --output json` 增加 `ok` / `failed_tasks` / `evidence` / `duration_ms`；任务失败退出码为 1，JSON 仍打到 stdout。
 - `fail_fast` 失败改为返回结构化 `RunResult`，不再丢证据。
 - shell 任务捕获 stderr/stdout 作为 `evidence.excerpt`（最长 2000 字符，保留尾部）。
@@ -11,6 +13,10 @@
 - 新增 Claude Code plugin（Skill + Stop hook）以及 Codex 用 `.agents/skills/neo-runner`。
 - 新增 `docs/agent-contract.md`、`docs/harness.md`。
 - 无参数运行 `neo-runner` 时打印 help，不再误跑默认示例。
+- 产品站：GitHub Pages `https://fzf54122.github.io/neo-runner/`。
+- 安装入口改为 GitHub Releases 二进制（`scripts/install.sh` / `.deb` / Windows exe），`cargo install --git` 仅作备选；用户不需要本地克隆。
+
+## [0.1.0]
 
 - 完成 workspace 分层脚手架初始化（`cli/core/app/infra/plugins/xtask`）。
 - 增加基础文档、示例配置与 CI 工作流。

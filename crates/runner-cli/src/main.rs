@@ -35,7 +35,7 @@ async fn main() {
     let output_format = args.output;
 
     if args.version {
-        println!("neo-runner 0.1.0");
+        println!("neo-runner 0.2.0");
         return;
     }
 

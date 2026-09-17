@@ -846,7 +846,7 @@ dependencies = [
 
 [[package]]
 name = "runner-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "runner-core",
  "runner-infra",
@@ -857,7 +857,7 @@ dependencies = [
 
 [[package]]
 name = "runner-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "clap_complete",
@@ -871,7 +871,7 @@ dependencies = [
 
 [[package]]
 name = "runner-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "thiserror",
@@ -879,7 +879,7 @@ dependencies = [
 
 [[package]]
 name = "runner-infra"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "reqwest",
  "runner-core",
@@ -891,7 +891,7 @@ dependencies = [
 
 [[package]]
 name = "runner-plugins"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "runner-core",
 ]
@@ -1650,7 +1650,7 @@ checksum = "9edde0db4769d2dc68579893f2306b26c6ecfbe0ef499b013d731b7b9247e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
 ]
