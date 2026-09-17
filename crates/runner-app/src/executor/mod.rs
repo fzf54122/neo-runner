@@ -9,6 +9,7 @@ pub type TaskFuture<'a> = Pin<Box<dyn Future<Output = ExecutionResult> + Send + 
 pub struct ExecutionResult {
     pub success: bool,
     pub error: Option<String>,
+    pub excerpt: Option<String>,
     pub exit_code: Option<i32>,
     pub status_code: Option<u16>,
 }
@@ -18,15 +19,36 @@ impl ExecutionResult {
         Self {
             success: true,
             error: None,
+            excerpt: None,
             exit_code,
             status_code,
         }
     }
 
-    pub fn err(message: impl Into<String>, exit_code: Option<i32>, status_code: Option<u16>) -> Self {
+    pub fn err(
+        message: impl Into<String>,
+        exit_code: Option<i32>,
+        status_code: Option<u16>,
+    ) -> Self {
         Self {
             success: false,
             error: Some(message.into()),
+            excerpt: None,
+            exit_code,
+            status_code,
+        }
+    }
+
+    pub fn err_with_excerpt(
+        message: impl Into<String>,
+        excerpt: Option<String>,
+        exit_code: Option<i32>,
+        status_code: Option<u16>,
+    ) -> Self {
+        Self {
+            success: false,
+            error: Some(message.into()),
+            excerpt,
             exit_code,
             status_code,
         }
@@ -40,6 +62,12 @@ pub trait TaskExecutor: Send + Sync {
 
 pub struct ExecutorRegistry {
     executors: HashMap<String, Box<dyn TaskExecutor>>,
+}
+
+impl Default for ExecutorRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ExecutorRegistry {
@@ -93,18 +121,28 @@ impl TaskExecutor for ShellExecutor {
                     None,
                 );
             };
-            match runner_infra::process::run_shell(cmd, task.timeout_ms).await {
-                Ok(0) => ExecutionResult::ok(Some(0), None),
-                Ok(code) => ExecutionResult::err(
-                    format!("task '{}' exited with status {}", task.id, code),
-                    Some(code),
-                    None,
-                ),
-                Err(err) => ExecutionResult::err(
-                    format!("task '{}' failed: {}", task.id, err),
-                    None,
-                    None,
-                ),
+            match runner_infra::process::run_shell_captured(cmd, task.timeout_ms).await {
+                Ok(output) if output.exit_code == 0 => ExecutionResult::ok(Some(0), None),
+                Ok(output) => {
+                    let excerpt = output.combined_excerpt();
+                    let excerpt = if excerpt.is_empty() {
+                        None
+                    } else {
+                        Some(runner_core::domain::clip_excerpt(
+                            &excerpt,
+                            runner_core::domain::EVIDENCE_EXCERPT_MAX_CHARS,
+                        ))
+                    };
+                    ExecutionResult::err_with_excerpt(
+                        format!("task '{}' exited with status {}", task.id, output.exit_code),
+                        excerpt,
+                        Some(output.exit_code),
+                        None,
+                    )
+                }
+                Err(err) => {
+                    ExecutionResult::err(format!("task '{}' failed: {}", task.id, err), None, None)
+                }
             }
         })
     }
@@ -119,7 +157,9 @@ impl TaskExecutor for HttpExecutor {
 
     fn execute<'a>(&'a self, task: &'a TaskSpec) -> TaskFuture<'a> {
         Box::pin(async move {
-            if let Err(err) = runner_plugins::http::validate(task.method.as_deref(), task.url.as_deref()) {
+            if let Err(err) =
+                runner_plugins::http::validate(task.method.as_deref(), task.url.as_deref())
+            {
                 return ExecutionResult::err(format!("task '{}' {}", task.id, err), None, None);
             }
             let Some(method) = task.method.as_deref() else {
@@ -174,9 +214,11 @@ impl TaskExecutor for SqlExecutor {
 
     fn execute<'a>(&'a self, task: &'a TaskSpec) -> TaskFuture<'a> {
         Box::pin(async move {
-            if let Err(err) =
-                runner_plugins::sql::validate(task.dsn.as_deref(), task.query.as_deref(), task.sql_file.as_deref())
-            {
+            if let Err(err) = runner_plugins::sql::validate(
+                task.dsn.as_deref(),
+                task.query.as_deref(),
+                task.sql_file.as_deref(),
+            ) {
                 return ExecutionResult::err(format!("task '{}' {}", task.id, err), None, None);
             }
             let Some(dsn) = task.dsn.as_deref() else {
@@ -187,15 +229,17 @@ impl TaskExecutor for SqlExecutor {
                 );
             };
 
-            match runner_infra::sql::execute_batch(dsn, task.query.as_deref(), task.sql_file.as_deref())
-                .await
+            match runner_infra::sql::execute_batch(
+                dsn,
+                task.query.as_deref(),
+                task.sql_file.as_deref(),
+            )
+            .await
             {
                 Ok(()) => ExecutionResult::ok(None, None),
-                Err(err) => ExecutionResult::err(
-                    format!("task '{}' failed: {}", task.id, err),
-                    None,
-                    None,
-                ),
+                Err(err) => {
+                    ExecutionResult::err(format!("task '{}' failed: {}", task.id, err), None, None)
+                }
             }
         })
     }

@@ -4,7 +4,7 @@
 
 <img src="docs/assets/neo-runner-banner.svg" alt="neo-runner banner" width="900" />
 
-**A production-oriented Rust task orchestrator: config-driven, reliable by default, observable by design.**
+**The agent saying "done" is not done. `neo-runner` green is done.**
 
 [中文](README.md) | **English**
 
@@ -13,17 +13,109 @@
 [![CI](https://img.shields.io/badge/CI-fmt%20%7C%20clippy%20%7C%20test-4c9aff.svg)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-f2c94c.svg)](LICENSE)
 
-[Quick Start](#-quick-start) • [Capabilities](#-capabilities) • [Capability Matrix](#-capability-matrix) • [Examples](#-examples) • [Quality](#-quality)
+[Quick Start](#-quick-start) • [Claude Code](#-use-with-claude-code) • [Capabilities](#-capabilities) • [Capability Matrix](#-capability-matrix) • [Examples](#-examples) • [Quality](#-quality)
 
 </div>
 
 ## 🌟 Positioning
 
-`neo-runner` upgrades script-based automation into a governable task system.
+`neo-runner` is a completion gate for coding agents: YAML describes the loop, JSON is the evidence, and exit code 0 is the only signal that work is done.
 
-- 🧭 **Unified protocol**: YAML for task definitions and policies.
-- 🛡️ **Reliable defaults**: retries, timeout, concurrency, fail-fast.
-- 📈 **Observable output**: JSON output for `run/plan/validate`.
+The engine is still the original Rust orchestrator (DAG, retries, timeouts, concurrency). The product is **binary + Skill + Hook**, not an MCP server.
+
+- 🧭 **Loop as contract**: put fmt/test/lint in `.agents/loop.yaml`.
+- 🛡️ **Red means not done**: if `ok` is `false`, the agent must not claim completion.
+- 📈 **JSON evidence**: `failed_tasks` + `evidence[].excerpt` tell it what to fix next.
+
+```bash
+bash scripts/install.sh
+cp examples/agent-loop.yaml .agents/loop.yaml   # replace commands for your repo
+neo-runner run -f .agents/loop.yaml --output json
+```
+
+See [docs/agent-contract.md](docs/agent-contract.md) and [docs/harness.md](docs/harness.md).
+
+## 🔌 Use with Claude Code
+
+Three pieces, not MCP:
+
+| Layer | Role |
+| --- | --- |
+| Binary `neo-runner` | Actually runs `.agents/loop.yaml` |
+| Skill | Tells the model which command to run and how to read JSON |
+| Stop hook | If the project has `.agents/loop.yaml`, force a rerun before the session ends; red blocks completion |
+
+### 1. Install the binary
+
+```bash
+bash scripts/install.sh
+neo-runner --version
+```
+
+### 2. Add a loop file to the project
+
+```bash
+mkdir -p .agents
+cp examples/agent-loop.yaml .agents/loop.yaml
+```
+
+Replace `echo fmt-ok` / `echo test-ok` with the project's real gates, for example:
+
+```yaml
+version: 1
+job:
+  name: agent-loop
+  fail_fast: true
+  tasks:
+    - id: fmt
+      type: shell
+      cmd: "cargo fmt --all -- --check"
+    - id: test
+      type: shell
+      depends_on: [fmt]
+      cmd: "cargo test --workspace"
+```
+
+If `.agents/loop.yaml` is missing, the hook skips. It will not intercept ordinary projects.
+
+### 3. Install the plugin
+
+After the repo is on GitHub:
+
+```text
+/plugin marketplace add fzf54122/neo-runner
+/plugin install neo-runner
+```
+
+Local development, before a marketplace exists:
+
+```text
+/plugin marketplace add /path/to/neo-runner
+/plugin install neo-runner
+```
+
+Project-level Skill only, no marketplace:
+
+```bash
+mkdir -p .claude/skills/neo-runner
+cp skills/neo-runner/SKILL.md .claude/skills/neo-runner/SKILL.md
+```
+
+### 4. What the model actually runs
+
+```bash
+neo-runner run -f .agents/loop.yaml --output json
+```
+
+- Exit `0` and `ok: true`: the only green signal
+- Exit `1`: red. JSON is still on stdout; read `failed_tasks` and `evidence[].excerpt`
+- Exit `2`: missing config or YAML failed to load
+
+You can also tell Claude:
+
+```text
+Verify with neo-runner. Do not claim it passed verbally.
+```
 
 ## ✨ Capabilities
 
@@ -34,6 +126,8 @@
 - ✅ Reporting: `text/json`, task-level details (duration, exit/status codes).
 - ✅ Event stream: `run_started/task_started/task_finished/run_finished`.
 - ✅ Error model: structured error codes across load/plan/execute paths.
+- ✅ Agent contract: `run --output json` emits `ok` / `failed_tasks` / `evidence` / `duration_ms`; failed runs exit 1.
+- ✅ Claude Code plugin: `SKILL.md` + Stop hook (intercepts only when `.agents/loop.yaml` exists).
 
 ## 📊 Capability Matrix
 
@@ -46,6 +140,8 @@
 | Concurrency control | ✅ | batch-level parallelism + cap |
 | Failure strategy | ✅ | fail-fast / non-fail-fast |
 | JSON reporting | ✅ | `run/plan/validate` |
+| Agent contract | ✅ | `ok` / `failed_tasks` / `evidence`; failed runs exit 1 |
+| Skill + Hook | ✅ | Claude plugin + Codex `SKILL.md` |
 | Event bus | ✅ | subscribable event bus + collector |
 | External plugins | 🚧 | lifecycle spec drafted, dynamic loading pending |
 
@@ -133,6 +229,12 @@ cargo run --bin neo-runner -- plan -f examples/demo.yaml
 cargo run --bin neo-runner -- run -f examples/demo.yaml
 ```
 
+Agent loop (completion gate):
+
+```bash
+cargo run --bin neo-runner -- run -f examples/agent-loop.yaml --output json
+```
+
 JSON output:
 
 ```bash
@@ -171,6 +273,8 @@ cargo test -p runner-cli
 - Architecture: `docs/architecture.md`
 - Config spec: `docs/config-spec.md`
 - Plugin spec: `docs/plugin-spec.md`
+- Agent contract: `docs/agent-contract.md`
+- Cross-harness install: `docs/harness.md`
 - Roadmap: `docs/roadmap.md`
 
 ## 🗺️ Roadmap Snapshot

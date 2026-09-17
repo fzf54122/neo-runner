@@ -1,0 +1,21 @@
+# Dogfood gate for this repository. Agents must not claim done unless this is green.
+version: 1
+job:
+  name: neo-runner-gate
+  fail_fast: true
+  max_concurrency: 1
+  default_timeout: 180s
+  tasks:
+    - id: unit-core
+      type: shell
+      cmd: "cargo test -p runner-core --lib"
+
+    - id: unit-infra
+      type: shell
+      depends_on: [unit-core]
+      cmd: "cargo test -p runner-infra --lib"
+
+    - id: unit-app
+      type: shell
+      depends_on: [unit-infra]
+      cmd: "cargo test -p runner-app --lib"

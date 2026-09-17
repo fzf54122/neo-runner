@@ -1,0 +1,21 @@
+{
+  "name": "neo-runner",
+  "displayName": "neo-runner",
+  "version": "0.1.0",
+  "description": "Agent completion gate: YAML loops, JSON evidence, exit 0 only when green",
+  "author": {
+    "name": "fzf"
+  },
+  "homepage": "https://github.com/fzf54122/neo-runner",
+  "repository": "https://github.com/fzf54122/neo-runner",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "hooks",
+    "ci",
+    "loop",
+    "neo-runner"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills/"
+}

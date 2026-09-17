@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+- Agent 完工契约：`run --output json` 增加 `ok` / `failed_tasks` / `evidence` / `duration_ms`；任务失败退出码为 1，JSON 仍打到 stdout。
+- `fail_fast` 失败改为返回结构化 `RunResult`，不再丢证据。
+- shell 任务捕获 stderr/stdout 作为 `evidence.excerpt`（最长 2000 字符，保留尾部）。
+- 新增 Agent 循环模板 `examples/agent-loop.yaml`、仓库门禁 `.agents/loop.yaml`。
+- 新增 Claude Code plugin（Skill + Stop hook）以及 Codex 用 `.agents/skills/neo-runner`。
+- 新增 `docs/agent-contract.md`、`docs/harness.md`。
+- 无参数运行 `neo-runner` 时打印 help，不再误跑默认示例。
+
 - 完成 workspace 分层脚手架初始化（`cli/core/app/infra/plugins/xtask`）。
 - 增加基础文档、示例配置与 CI 工作流。
 - `runner-infra/config_loader` 完成 `version/fail_fast/max_concurrency/depends_on/timeout/retry` 的加载与校验。

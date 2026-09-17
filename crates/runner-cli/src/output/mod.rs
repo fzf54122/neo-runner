@@ -15,9 +15,13 @@ pub fn print_result(result: &RunResult, format: OutputFormat) {
         }
         OutputFormat::Json => {
             let payload = serde_json::json!({
+                "ok": result.success,
                 "success": result.success,
                 "total": result.total,
                 "failed": result.failed,
+                "duration_ms": result.duration_ms,
+                "failed_tasks": result.failed_tasks,
+                "evidence": result.evidence,
                 "tasks": result.tasks,
                 "events": result.events,
                 "batches": result.batches,

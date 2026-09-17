@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "ti
 tracing = "0.1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
+tempfile = "3"
 
 [profile.release]
 opt-level = "z"     # 或 "s"，z 更极致体积

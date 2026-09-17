@@ -17,3 +17,6 @@ runner-core = { path = "../runner-core" }
 runner-infra = { path = "../runner-infra" }
 serde_json.workspace = true
 tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -4,7 +4,7 @@
 
 <img src="docs/assets/neo-runner-banner.svg" alt="neo-runner banner" width="900" />
 
-**一个面向工程交付的 Rust 任务编排器：配置驱动、默认可靠、可观测输出。**
+**Agent 说「做完了」不算。`neo-runner` 绿灯才算。**
 
 **简体中文** | [English](README.en.md)
 
@@ -13,17 +13,109 @@
 [![CI](https://img.shields.io/badge/CI-fmt%20%7C%20clippy%20%7C%20test-4c9aff.svg)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-f2c94c.svg)](LICENSE)
 
-[⚡ 快速开始](#-快速开始) • [✨ 关键能力](#-关键能力) • [📊 能力矩阵](#-能力矩阵) • [💻 示例](#-示例) • [🧪 质量保障](#-质量保障)
+[⚡ 快速开始](#-快速开始) • [🔌 Claude Code](#-在-claude-code-里用) • [✨ 关键能力](#-关键能力) • [📊 能力矩阵](#-能力矩阵) • [💻 示例](#-示例) • [🧪 质量保障](#-质量保障)
 
 </div>
 
 ## 🌟 项目定位
 
-`neo-runner` 用于把“零散脚本执行”升级为“可治理任务系统”。
+`neo-runner` 是给编码 Agent 的完工门禁：YAML 描述循环，JSON 给出证据，只有退出码 0 才允许声称完成。
 
-- 🧭 **统一协议**：YAML 描述任务与策略，不再依赖口头约定。
-- 🛡️ **默认可靠**：重试、超时、并发限制、失败策略开箱即用。
-- 📈 **可观测**：`run/plan/validate` 支持 JSON 输出，便于 CI 与平台接入。
+底层仍是原来的 Rust 任务编排器（DAG、重试、超时、并发），只是默认用法改成了 **二进制 + Skill + Hook**，不是 MCP。
+
+- 🧭 **循环即契约**：把 fmt/test/lint 写进 `.agents/loop.yaml`。
+- 🛡️ **红灯不准撒谎**：`ok: false` 时 Agent 不得说「已完成」。
+- 📈 **JSON 证据**：`failed_tasks` + `evidence[].excerpt` 告诉下一步改什么。
+
+```bash
+bash scripts/install.sh
+cp examples/agent-loop.yaml .agents/loop.yaml   # 按项目改命令
+neo-runner run -f .agents/loop.yaml --output json
+```
+
+契约说明见 [docs/agent-contract.md](docs/agent-contract.md)，安装见 [docs/harness.md](docs/harness.md)。
+
+## 🔌 在 Claude Code 里用
+
+三件东西，不是 MCP：
+
+| 层 | 作用 |
+| --- | --- |
+| 二进制 `neo-runner` | 真正跑 `.agents/loop.yaml` |
+| Skill | 告诉模型完工前必须跑哪条命令、怎么读 JSON |
+| Stop hook | 项目里有 `.agents/loop.yaml` 时，会话结束前强制再跑一遍；红灯就拦 |
+
+### 1. 装二进制
+
+```bash
+bash scripts/install.sh
+neo-runner --version
+```
+
+### 2. 给项目一份循环文件
+
+```bash
+mkdir -p .agents
+cp examples/agent-loop.yaml .agents/loop.yaml
+```
+
+把里面的 `echo fmt-ok` / `echo test-ok` 换成这个项目真正的门禁，例如：
+
+```yaml
+version: 1
+job:
+  name: agent-loop
+  fail_fast: true
+  tasks:
+    - id: fmt
+      type: shell
+      cmd: "cargo fmt --all -- --check"
+    - id: test
+      type: shell
+      depends_on: [fmt]
+      cmd: "cargo test --workspace"
+```
+
+没有 `.agents/loop.yaml` 时 hook 会 skip，不会误拦普通项目。
+
+### 3. 装 plugin
+
+仓库已推到 GitHub 后：
+
+```text
+/plugin marketplace add fzf54122/neo-runner
+/plugin install neo-runner
+```
+
+本机开发、还没 marketplace 时：
+
+```text
+/plugin marketplace add /path/to/neo-runner
+/plugin install neo-runner
+```
+
+只想给当前项目一份 Skill、不走 marketplace：
+
+```bash
+mkdir -p .claude/skills/neo-runner
+cp skills/neo-runner/SKILL.md .claude/skills/neo-runner/SKILL.md
+```
+
+### 4. 模型实际跑什么
+
+```bash
+neo-runner run -f .agents/loop.yaml --output json
+```
+
+- 退出码 `0` 且 `ok: true`：才允许说做完
+- 退出码 `1`：红灯。JSON 仍在 stdout，读 `failed_tasks` 和 `evidence[].excerpt` 再改
+- 退出码 `2`：配置缺失或 YAML 加载失败
+
+也可以直接对 Claude 说：
+
+```text
+用 neo-runner 验收一下，别口头说通过。
+```
 
 ## ✨ 关键能力
 
@@ -37,6 +129,8 @@
 - ✅ 执行插件注册：内置 `shell/http/sql` 通过统一执行注册表接入。
 - ✅ 扩展入口：支持通过注册表注入自定义执行器（为外部插件铺路）。
 - ✅ 错误模型：配置/调度/执行均支持结构化错误码输出。
+- ✅ Agent 契约：`run --output json` 输出 `ok` / `failed_tasks` / `evidence` / `duration_ms`，失败退出码为 1。
+- ✅ Claude Code plugin：`SKILL.md` + Stop hook（有 `.agents/loop.yaml` 才拦截）。
 
 ## 📊 能力矩阵
 
@@ -49,6 +143,8 @@
 | 并发控制 | ✅ | 分批次并发 + `max_concurrency` |
 | 失败策略 | ✅ | `fail_fast` / 非 fail-fast |
 | JSON 报告 | ✅ | `run/plan/validate` |
+| Agent 契约 | ✅ | `ok` / `failed_tasks` / `evidence`，失败退出 1 |
+| Skill + Hook | ✅ | Claude plugin + Codex `SKILL.md` |
 | 事件流 | ✅ 可订阅 | eventbus + in-memory collector |
 | 插件注册机制 | ✅ 基础版 | 统一执行注册表，外部插件扩展预留 |
 
@@ -140,7 +236,13 @@ cargo run --bin neo-runner -- plan -f examples/demo.yaml
 cargo run --bin neo-runner -- run -f examples/demo.yaml
 ```
 
-JSON 输出（适合脚本与 CI）：
+Agent 循环（完工门禁）：
+
+```bash
+cargo run --bin neo-runner -- run -f examples/agent-loop.yaml --output json
+```
+
+JSON 输出（适合脚本、CI 与 Agent）：
 
 ```bash
 cargo run --bin neo-runner -- validate -f examples/demo.yaml --output json
@@ -186,6 +288,8 @@ CI 质量门禁：
 - 架构设计：`docs/architecture.md`
 - 配置规范：`docs/config-spec.md`
 - 插件规范：`docs/plugin-spec.md`
+- Agent 契约：`docs/agent-contract.md`
+- 跨 Harness 安装：`docs/harness.md`
 - 路线规划：`docs/roadmap.md`
 
 ## 🗺️ 路线图摘要
