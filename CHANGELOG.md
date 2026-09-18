@@ -4,7 +4,6 @@
 
 ## [Unreleased]
 
-- Claude plugin 安装标识改为 `fzf54122@neo-runner`。
 - 官网按 turbo_sync 的 Vite + React 写法重做：终端优先落地页、一条安装命令、黑色终端演示；文档走 hash 路由，中英双语保留。
 
 ## [0.2.0] - 2026-09-17

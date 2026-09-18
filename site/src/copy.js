@@ -271,7 +271,7 @@ neo-runner init --skill
 
 \`\`\`text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install fzf54122@neo-runner
+/plugin install neo-runner@fzf54122
 \`\`\`
 
 Stop hook 只随 marketplace plugin 加载。
@@ -410,7 +410,7 @@ Without the \`claude\` CLI, type this in the chat:
 
 \`\`\`text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install fzf54122@neo-runner
+/plugin install neo-runner@fzf54122
 \`\`\`
 
 The Stop hook loads only with the marketplace plugin.

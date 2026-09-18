@@ -14,7 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/in
 
 - 从 GitHub Releases 安装 `neo-runner` 到 `~/.local/bin`（可用 `NEO_RUNNER_PREFIX` 改）
 - 尽量把该目录写进 shell `PATH`
-- 本机有 `claude` CLI 时：`claude plugin marketplace add fzf54122/neo-runner`，再 `claude plugin install fzf54122@neo-runner --scope user`
+- 本机有 `claude` CLI 时：`claude plugin marketplace add fzf54122/neo-runner`，再 `claude plugin install neo-runner@fzf54122 --scope user`
 - 写入用户级 skill：`~/.claude/skills/neo-runner`、`~/.agents/skills/neo-runner`；有 Codex 时再写 `~/.codex/skills/neo-runner`
 
 只装二进制：
@@ -57,7 +57,7 @@ neo-runner init --skill
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install fzf54122@neo-runner
+/plugin install neo-runner@fzf54122
 ```
 
 Stop hook 只随 marketplace plugin 加载。仅有 `~/.claude/skills/` 兜底 skill 时没有 hook。

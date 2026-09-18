@@ -74,11 +74,11 @@ neo-runner run -f .agents/loop.yaml --output json
 | Skill | 告诉模型完工前必须跑哪条命令、怎么读 JSON |
 | Stop hook | 项目里有 `.agents/loop.yaml` 时，会话结束前强制再跑一遍；红灯就拦 |
 
-`install.sh` 会调用 `claude plugin marketplace add fzf54122/neo-runner` 和 `claude plugin install fzf54122@neo-runner --scope user`。没有 `claude` CLI 时，在对话框里输入：
+`install.sh` 会调用 `claude plugin marketplace add fzf54122/neo-runner` 和 `claude plugin install neo-runner@fzf54122 --scope user`。没有 `claude` CLI 时，在对话框里输入：
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install fzf54122@neo-runner
+/plugin install neo-runner@fzf54122
 ```
 
 然后对 Claude 说：

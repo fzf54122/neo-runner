@@ -137,7 +137,7 @@ install_claude_plugin() {
     echo "claude CLI not found; wrote user skill only."
     echo "In Claude Code run:"
     echo "  /plugin marketplace add ${repo}"
-    echo "  /plugin install fzf54122@neo-runner"
+    echo "  /plugin install neo-runner@fzf54122"
     return 0
   fi
 
@@ -147,12 +147,12 @@ install_claude_plugin() {
     echo "claude plugin marketplace add failed (already added is ok)." >&2
   fi
 
-  if claude plugin install fzf54122@neo-runner --scope user -y; then
-    echo "Installed Claude plugin fzf54122@neo-runner (user scope)."
+  if claude plugin install neo-runner@fzf54122 --scope user -y; then
+    echo "Installed Claude plugin neo-runner@fzf54122 (user scope)."
   else
     echo "claude plugin install failed. In Claude Code run:" >&2
     echo "  /plugin marketplace add ${repo}" >&2
-    echo "  /plugin install fzf54122@neo-runner" >&2
+    echo "  /plugin install neo-runner@fzf54122" >&2
   fi
 }
 

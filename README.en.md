@@ -74,11 +74,11 @@ Three pieces, not MCP:
 | Skill | Tells the model which command to run and how to read JSON |
 | Stop hook | If the project has `.agents/loop.yaml`, force a rerun before the session ends; red blocks completion |
 
-`install.sh` runs `claude plugin marketplace add fzf54122/neo-runner` and `claude plugin install fzf54122@neo-runner --scope user`. Without the `claude` CLI, type this in the session:
+`install.sh` runs `claude plugin marketplace add fzf54122/neo-runner` and `claude plugin install neo-runner@fzf54122 --scope user`. Without the `claude` CLI, type this in the session:
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install fzf54122@neo-runner
+/plugin install neo-runner@fzf54122
 ```
 
 Then tell Claude:
