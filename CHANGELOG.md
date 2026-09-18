@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- 新增 `scripts/uninstall.sh`：卸载全局二进制、PATH 标记、用户级 skill 与 Claude plugin / marketplace，不删项目 `.agents/loop.yaml`。
+- `install.sh` 按当前系统从 GitHub Releases 选产物：Linux x86_64 下 `tar.gz`，Windows x86_64 下 `neo-runner.exe`；默认走 `/releases/latest`，没有对应附件时提示改用 `cargo install`。
+- Claude plugin 安装标识改回 `neo-runner@neo-runner`（`@` 右边是 `marketplace.json` 的 `name`，不是 GitHub 用户名；首次 `marketplace add` 登记的名字之后不会跟着远程改名）。`install.sh` 会先 `update` marketplace，再卸载旧 cache 后重装。plugin 版本升到 `0.2.1`，去掉重复 `hooks` 声明后才能刷新已装副本。
 - 官网按 turbo_sync 的 Vite + React 写法重做：终端优先落地页、一条安装命令、黑色终端演示；文档走 hash 路由，中英双语保留。
 
 ## [0.2.0] - 2026-09-17
@@ -11,7 +14,7 @@
 - `scripts/install.sh` 一条命令安装二进制、PATH、Claude plugin 与 Codex/用户级 skill；不写当前目录。
 - 新增 `neo-runner init`（`--force` / `--skill`），在项目里写入 `.agents/loop.yaml`。
 - 官网改为 Astro Starlight（中英），首页只突出一条安装命令。
-- Claude plugin 安装标识为 `neo-runner@fzf54122`。
+- Claude plugin 安装标识为 `neo-runner@neo-runner`。
 - Claude plugin 不再在 `plugin.json` 里重复声明 `hooks/hooks.json`（该文件会自动加载）。
 - 官网改为 GitHub Actions 的 `deploy-pages` 正式部署。
 - Release 工作流只在 `v*` tag 或手动触发时发布，不再对 `main` 上的 `feat:`/`fix:` 自动打预发布。

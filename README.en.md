@@ -64,6 +64,12 @@ Verify:
 neo-runner run -f .agents/loop.yaml --output json
 ```
 
+Uninstall the global install (project `.agents/loop.yaml` is left alone):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/uninstall.sh | bash
+```
+
 ## 🔌 Use with Claude Code
 
 Three pieces, not MCP:
@@ -74,11 +80,12 @@ Three pieces, not MCP:
 | Skill | Tells the model which command to run and how to read JSON |
 | Stop hook | If the project has `.agents/loop.yaml`, force a rerun before the session ends; red blocks completion |
 
-`install.sh` runs `claude plugin marketplace add fzf54122/neo-runner` and `claude plugin install neo-runner@fzf54122 --scope user`. Without the `claude` CLI, type this in the session:
+`install.sh` runs `claude plugin marketplace add fzf54122/neo-runner`, `claude plugin marketplace update neo-runner`, then `claude plugin install neo-runner@neo-runner --scope user`. Without the `claude` CLI, type this in the session:
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install neo-runner@fzf54122
+/plugin marketplace update neo-runner
+/plugin install neo-runner@neo-runner
 ```
 
 Then tell Claude:

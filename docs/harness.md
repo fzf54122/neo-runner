@@ -14,7 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/in
 
 - 从 GitHub Releases 安装 `neo-runner` 到 `~/.local/bin`（可用 `NEO_RUNNER_PREFIX` 改）
 - 尽量把该目录写进 shell `PATH`
-- 本机有 `claude` CLI 时：`claude plugin marketplace add fzf54122/neo-runner`，再 `claude plugin install neo-runner@fzf54122 --scope user`
+- 本机有 `claude` CLI 时：`claude plugin marketplace add fzf54122/neo-runner`，再 `claude plugin marketplace update neo-runner`，然后 `claude plugin install neo-runner@neo-runner --scope user`
 - 写入用户级 skill：`~/.claude/skills/neo-runner`、`~/.agents/skills/neo-runner`；有 Codex 时再写 `~/.codex/skills/neo-runner`
 
 只装二进制：
@@ -34,6 +34,21 @@ cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin ne
 ```bash
 neo-runner --version
 ```
+
+卸载全局安装（不删项目里的 `.agents/loop.yaml`）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/uninstall.sh | bash
+```
+
+这会：
+
+- 删除 `~/.local/bin/neo-runner`（以及 `~/.cargo/bin/neo-runner` 残留）
+- 去掉 `install.sh` 写入的 `# neo-runner` PATH 行
+- 删除用户级 skill：`~/.claude/skills/neo-runner`、`~/.agents/skills/neo-runner`、`~/.codex/skills/neo-runner`
+- 卸载 Claude plugin / marketplace，并清掉 cache / data 残留
+
+只看会删什么：`bash scripts/uninstall.sh --dry-run`。本机若装了 `.deb`，默认只提示；真正清包用 `--purge-deb`。
 
 ## 项目循环文件
 
@@ -57,7 +72,8 @@ neo-runner init --skill
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install neo-runner@fzf54122
+/plugin marketplace update neo-runner
+/plugin install neo-runner@neo-runner
 ```
 
 Stop hook 只随 marketplace plugin 加载。仅有 `~/.claude/skills/` 兜底 skill 时没有 hook。

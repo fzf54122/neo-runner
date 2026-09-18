@@ -433,3 +433,275 @@ fn install_sh_binary_only_does_not_write_cwd_loop() {
         .expect("version");
     assert!(String::from_utf8_lossy(&version.stdout).contains("0.2.0-test"));
 }
+
+fn uninstall_script() -> String {
+    format!("{}/../../scripts/uninstall.sh", env!("CARGO_MANIFEST_DIR"))
+}
+
+fn write_unix_file(path: &std::path::Path, contents: &str) {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).expect("create parent");
+    }
+    std::fs::write(path, contents).expect("write file");
+}
+
+struct UninstallFixture {
+    dir: tempfile::TempDir,
+    home: std::path::PathBuf,
+    prefix: std::path::PathBuf,
+    cargo_home: std::path::PathBuf,
+}
+
+impl UninstallFixture {
+    fn new() -> Self {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let home = dir.path().join("home");
+        let prefix = dir.path().join("bin");
+        let cargo_home = home.join(".cargo");
+        std::fs::create_dir_all(&home).expect("home");
+        std::fs::create_dir_all(&prefix).expect("prefix");
+        std::fs::create_dir_all(cargo_home.join("bin")).expect("cargo bin");
+
+        write_unix_file(&prefix.join("neo-runner"), "#!/bin/sh\necho neo-runner\n");
+        write_unix_file(
+            &cargo_home.join("bin/neo-runner"),
+            "#!/bin/sh\necho cargo-neo-runner\n",
+        );
+        write_unix_file(&home.join(".claude/skills/neo-runner/SKILL.md"), "skill\n");
+        write_unix_file(&home.join(".codex/skills/neo-runner/SKILL.md"), "skill\n");
+        write_unix_file(&home.join(".agents/skills/neo-runner/SKILL.md"), "skill\n");
+        write_unix_file(
+            &home.join(".zprofile"),
+            "export PATH=\"$HOME/.local/bin:$PATH\" # neo-runner\nkeep-this-line\n",
+        );
+        write_unix_file(
+            &home.join(".claude/plugins/cache/neo-runner/neo-runner/0.2.0/SKILL.md"),
+            "plugin\n",
+        );
+        write_unix_file(
+            &home.join(".claude/plugins/data/neo-runner-neo-runner/.keep"),
+            "",
+        );
+        write_unix_file(
+            &home.join(".claude/plugins/marketplaces/neo-runner/README.md"),
+            "marketplace\n",
+        );
+        write_unix_file(
+            &home.join(".claude/plugins/installed_plugins.json"),
+            r#"{
+  "version": 2,
+  "plugins": {
+    "keep-me@official": [{"scope": "user"}],
+    "neo-runner@fzf54122": [{"scope": "user"}],
+    "neo-runner@neo-runner": [{"scope": "user"}]
+  }
+}
+"#,
+        );
+        write_unix_file(
+            &home.join(".claude/plugins/known_marketplaces.json"),
+            r#"{
+  "keep-me": {"source": {"repo": "keep/me"}},
+  "neo-runner": {"source": {"repo": "fzf54122/neo-runner"}}
+}
+"#,
+        );
+        write_unix_file(&dir.path().join(".agents/loop.yaml"), "keep-project-loop\n");
+
+        Self {
+            dir,
+            home,
+            prefix,
+            cargo_home,
+        }
+    }
+
+    fn run(&self, args: &[&str]) -> std::process::Output {
+        Command::new("bash")
+            .arg(uninstall_script())
+            .args(args)
+            .current_dir(self.dir.path())
+            .env("HOME", &self.home)
+            .env("CARGO_HOME", &self.cargo_home)
+            .env("NEO_RUNNER_PREFIX", &self.prefix)
+            .env("NEO_RUNNER_SKIP_CLAUDE", "1")
+            .env("NEO_RUNNER_SKIP_DEB", "1")
+            .env("PATH", prepend_path(&self.prefix))
+            .output()
+            .expect("uninstall.sh")
+    }
+}
+
+#[test]
+fn uninstall_sh_removes_global_files_and_keeps_project_loop() {
+    let fx = UninstallFixture::new();
+    let output = fx.run(&[]);
+    assert!(
+        output.status.success(),
+        "stderr={} stdout={}",
+        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    assert!(!fx.prefix.join("neo-runner").exists());
+    assert!(!fx.cargo_home.join("bin/neo-runner").exists());
+    assert!(!fx.home.join(".claude/skills/neo-runner").exists());
+    assert!(!fx.home.join(".codex/skills/neo-runner").exists());
+    assert!(!fx.home.join(".agents/skills/neo-runner").exists());
+    assert!(!fx.home.join(".claude/plugins/cache/neo-runner").exists());
+    assert!(!fx
+        .home
+        .join(".claude/plugins/data/neo-runner-neo-runner")
+        .exists());
+    assert!(!fx
+        .home
+        .join(".claude/plugins/marketplaces/neo-runner")
+        .exists());
+    assert!(fx.dir.path().join(".agents/loop.yaml").is_file());
+
+    let zprofile = std::fs::read_to_string(fx.home.join(".zprofile")).expect("zprofile");
+    assert!(!zprofile.contains("# neo-runner"));
+    assert!(zprofile.contains("keep-this-line"));
+
+    let plugins: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(fx.home.join(".claude/plugins/installed_plugins.json"))
+            .expect("plugins json"),
+    )
+    .expect("plugins parse");
+    assert!(plugins["plugins"].get("keep-me@official").is_some());
+    assert!(plugins["plugins"].get("neo-runner@fzf54122").is_none());
+    assert!(plugins["plugins"].get("neo-runner@neo-runner").is_none());
+
+    let markets: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(fx.home.join(".claude/plugins/known_marketplaces.json"))
+            .expect("markets json"),
+    )
+    .expect("markets parse");
+    assert!(markets.get("keep-me").is_some());
+    assert!(markets.get("neo-runner").is_none());
+}
+
+#[test]
+fn uninstall_sh_dry_run_does_not_delete() {
+    let fx = UninstallFixture::new();
+    let output = fx.run(&["--dry-run"]);
+    assert!(
+        output.status.success(),
+        "stderr={} stdout={}",
+        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("would remove"));
+    assert!(fx.prefix.join("neo-runner").is_file());
+    assert!(fx.home.join(".claude/skills/neo-runner/SKILL.md").is_file());
+    assert!(fx.dir.path().join(".agents/loop.yaml").is_file());
+}
+
+#[test]
+fn uninstall_sh_is_idempotent() {
+    let fx = UninstallFixture::new();
+    let first = fx.run(&[]);
+    assert!(first.status.success());
+    let second = fx.run(&[]);
+    assert!(
+        second.status.success(),
+        "stderr={} stdout={}",
+        String::from_utf8_lossy(&second.stderr),
+        String::from_utf8_lossy(&second.stdout)
+    );
+}
+
+#[test]
+fn uninstall_sh_keep_plugins_leaves_skills() {
+    let fx = UninstallFixture::new();
+    let output = fx.run(&["--keep-plugins"]);
+    assert!(output.status.success());
+    assert!(!fx.prefix.join("neo-runner").exists());
+    assert!(fx.home.join(".claude/skills/neo-runner/SKILL.md").is_file());
+    assert!(fx.home.join(".codex/skills/neo-runner/SKILL.md").is_file());
+}
+
+#[test]
+fn claude_plugin_install_id_matches_marketplace_name() {
+    let root = format!("{}/../..", env!("CARGO_MANIFEST_DIR"));
+    let marketplace = std::fs::read_to_string(format!("{root}/.claude-plugin/marketplace.json"))
+        .expect("marketplace.json");
+    let plugin =
+        std::fs::read_to_string(format!("{root}/.claude-plugin/plugin.json")).expect("plugin.json");
+    let install =
+        std::fs::read_to_string(format!("{root}/scripts/install.sh")).expect("install.sh");
+
+    assert!(
+        marketplace.contains("\"name\": \"neo-runner\""),
+        "marketplace.json name must stay neo-runner; @ right-hand side is this field, not the GitHub user"
+    );
+    assert!(
+        plugin.contains("\"name\": \"neo-runner\""),
+        "plugin.json name must stay neo-runner"
+    );
+    assert!(
+        !plugin.contains("\"hooks\":"),
+        "plugin.json must not redeclare hooks/hooks.json; Claude loads it automatically"
+    );
+    assert!(
+        install.contains("plugin_id=\"neo-runner@neo-runner\""),
+        "install.sh must install neo-runner@neo-runner"
+    );
+    assert!(
+        install.contains("claude plugin marketplace update"),
+        "install.sh must update an already-added marketplace; add is a no-op"
+    );
+    assert!(
+        install.contains("claude plugin uninstall"),
+        "install.sh must uninstall before reinstall so a same-version cache still refreshes"
+    );
+}
+
+fn install_script() -> String {
+    format!("{}/../../scripts/install.sh", env!("CARGO_MANIFEST_DIR"))
+}
+
+fn detect_install_asset(os: &str, arch: &str) -> std::process::Output {
+    Command::new("bash")
+        .arg(install_script())
+        .env("NEO_RUNNER_DETECT_ONLY", "1")
+        .env("NEO_RUNNER_OS", os)
+        .env("NEO_RUNNER_ARCH", arch)
+        .output()
+        .expect("install.sh detect")
+}
+
+#[test]
+fn install_sh_selects_linux_x86_64_release_asset() {
+    let output = detect_install_asset("Linux", "x86_64");
+    assert!(
+        output.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("asset=neo-runner-linux-x86_64.tar.gz"));
+    assert!(stdout.contains("installed=neo-runner"));
+}
+
+#[test]
+fn install_sh_selects_windows_exe_release_asset() {
+    let output = detect_install_asset("MINGW64_NT-10.0", "x86_64");
+    assert!(
+        output.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("asset=neo-runner.exe"));
+    assert!(stdout.contains("installed=neo-runner.exe"));
+}
+
+#[test]
+fn install_sh_rejects_unreleased_platform() {
+    let output = detect_install_asset("Darwin", "arm64");
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("unsupported platform"));
+}

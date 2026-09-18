@@ -64,6 +64,12 @@ cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin ne
 neo-runner run -f .agents/loop.yaml --output json
 ```
 
+卸载全局安装（不删项目里的 `.agents/loop.yaml`）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/uninstall.sh | bash
+```
+
 ## 🔌 在 Claude Code 里用
 
 三件东西，不是 MCP：
@@ -74,11 +80,12 @@ neo-runner run -f .agents/loop.yaml --output json
 | Skill | 告诉模型完工前必须跑哪条命令、怎么读 JSON |
 | Stop hook | 项目里有 `.agents/loop.yaml` 时，会话结束前强制再跑一遍；红灯就拦 |
 
-`install.sh` 会调用 `claude plugin marketplace add fzf54122/neo-runner` 和 `claude plugin install neo-runner@fzf54122 --scope user`。没有 `claude` CLI 时，在对话框里输入：
+`install.sh` 会调用 `claude plugin marketplace add fzf54122/neo-runner`、`claude plugin marketplace update neo-runner`，再 `claude plugin install neo-runner@neo-runner --scope user`。没有 `claude` CLI 时，在对话框里输入：
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install neo-runner@fzf54122
+/plugin marketplace update neo-runner
+/plugin install neo-runner@neo-runner
 ```
 
 然后对 Claude 说：

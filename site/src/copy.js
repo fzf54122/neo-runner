@@ -6,6 +6,8 @@
 export const REPO_URL = 'https://github.com/fzf54122/neo-runner'
 export const INSTALL_CMD =
   'curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash'
+export const UNINSTALL_CMD =
+  'curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/uninstall.sh | bash'
 export const RUN_CMD = 'neo-runner run -f .agents/loop.yaml --output json'
 export const INIT_CMD = 'neo-runner init'
 export const CARGO_CMD =
@@ -175,6 +177,12 @@ ${SKIP_PLUGINS_CMD}
 ${CARGO_CMD}
 \`\`\`
 
+卸载全局安装（不删项目里的 \`.agents/loop.yaml\`）：
+
+\`\`\`bash
+${UNINSTALL_CMD}
+\`\`\`
+
 ## 验收
 
 \`\`\`bash
@@ -251,6 +259,12 @@ ${INSTALL_CMD}
 ${SKIP_PLUGINS_CMD}
 \`\`\`
 
+卸载全局安装（不删项目里的 \`.agents/loop.yaml\`）：
+
+\`\`\`bash
+${UNINSTALL_CMD}
+\`\`\`
+
 ## 项目循环文件
 
 全局安装不写当前目录。进仓库后：
@@ -271,7 +285,8 @@ neo-runner init --skill
 
 \`\`\`text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install neo-runner@fzf54122
+/plugin marketplace update neo-runner
+/plugin install neo-runner@neo-runner
 \`\`\`
 
 Stop hook 只随 marketplace plugin 加载。
@@ -312,6 +327,12 @@ No prebuilt package:
 
 \`\`\`bash
 ${CARGO_CMD}
+\`\`\`
+
+Uninstall the global install (project \`.agents/loop.yaml\` is left alone):
+
+\`\`\`bash
+${UNINSTALL_CMD}
 \`\`\`
 
 ## Verify
@@ -390,6 +411,12 @@ Binary only:
 ${SKIP_PLUGINS_CMD}
 \`\`\`
 
+Uninstall the global install (project \`.agents/loop.yaml\` is left alone):
+
+\`\`\`bash
+${UNINSTALL_CMD}
+\`\`\`
+
 ## Project loop file
 
 Global install does not write the current directory. In the repo:
@@ -410,7 +437,8 @@ Without the \`claude\` CLI, type this in the chat:
 
 \`\`\`text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install neo-runner@fzf54122
+/plugin marketplace update neo-runner
+/plugin install neo-runner@neo-runner
 \`\`\`
 
 The Stop hook loads only with the marketplace plugin.

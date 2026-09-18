@@ -1,7 +1,7 @@
 {
   "name": "neo-runner",
   "displayName": "neo-runner",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Agent completion gate: YAML loops, JSON evidence, exit 0 only when green",
   "author": {
     "name": "fzf"
