@@ -329,6 +329,8 @@ fn init_writes_loop_and_refuses_without_force() {
     let v = parse_json_line(&String::from_utf8_lossy(&first.stdout));
     assert_eq!(v["ok"], true);
     assert_eq!(v["written"][0], ".agents/loop.yaml");
+    assert_eq!(v["preset"], "generic");
+    assert_eq!(v["source"], "detected");
     let loop_path = dir.path().join(".agents/loop.yaml");
     assert!(loop_path.is_file());
     assert!(std::fs::read_to_string(&loop_path)
@@ -373,6 +375,29 @@ fn init_force_and_skill() {
             .expect("loop")
             .contains("echo test-ok")
     );
+}
+
+#[test]
+fn init_preset_flag_writes_rust_loop() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
+        .args(["init", "--preset", "rust", "--output", "json"])
+        .current_dir(dir.path())
+        .output()
+        .expect("init --preset rust");
+    assert!(
+        output.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let v = parse_json_line(&String::from_utf8_lossy(&output.stdout));
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["preset"], "rust");
+    assert_eq!(v["source"], "flag");
+    let body = std::fs::read_to_string(dir.path().join(".agents/loop.yaml")).expect("loop");
+    assert!(body.contains("cargo fmt --all -- --check"));
+    assert!(body.contains("cargo test --workspace"));
+    assert!(!body.contains("echo fmt-ok"));
 }
 
 #[test]
@@ -647,6 +672,10 @@ fn claude_plugin_install_id_matches_marketplace_name() {
     assert!(
         install.contains("plugin_id=\"neo-runner@neo-runner\""),
         "install.sh must install neo-runner@neo-runner"
+    );
+    assert!(
+        !install.contains("legacy_plugin_id") && !install.contains("neo-runner@fzf54122"),
+        "install.sh must not probe the old fzf54122 marketplace name"
     );
     assert!(
         install.contains("claude plugin marketplace update"),

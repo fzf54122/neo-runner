@@ -4,8 +4,9 @@
 
 ## [Unreleased]
 
+- `neo-runner init` 按仓库根文件写入常见 `.agents/loop.yaml`（rust/go/python/node），可用 `--preset` 覆盖；不够就直接改项目 YAML。
 - 新增 `scripts/uninstall.sh`：卸载全局二进制、PATH 标记、用户级 skill 与 Claude plugin / marketplace，不删项目 `.agents/loop.yaml`。
-- `install.sh` 按当前系统从 GitHub Releases 选产物：Linux x86_64 下 `tar.gz`，Windows x86_64 下 `neo-runner.exe`；默认走 `/releases/latest`，没有对应附件时提示改用 `cargo install`。
+- `install.sh` 按当前系统从 GitHub Releases 选产物：Linux x86_64 下 `tar.gz`，Windows x86_64 下 `neo-runner.exe`；直接走 `/releases/latest/download`，不再打 GitHub API。Claude plugin 只认 `neo-runner@neo-runner`，不再探测旧 marketplace 名 `fzf54122`。
 - Claude plugin 安装标识改回 `neo-runner@neo-runner`（`@` 右边是 `marketplace.json` 的 `name`，不是 GitHub 用户名；首次 `marketplace add` 登记的名字之后不会跟着远程改名）。`install.sh` 会先 `update` marketplace，再卸载旧 cache 后重装。plugin 版本升到 `0.2.1`，去掉重复 `hooks` 声明后才能刷新已装副本。
 - 官网按 turbo_sync 的 Vite + React 写法重做：终端优先落地页、一条安装命令、黑色终端演示；文档走 hash 路由，中英双语保留。
 

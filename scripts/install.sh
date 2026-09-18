@@ -74,60 +74,13 @@ if [ -z "${asset}" ]; then
   exit 1
 fi
 
-release_api_url() {
+if [ -z "${download_url}" ]; then
   if [ "${tag}" = "latest" ]; then
-    printf 'https://api.github.com/repos/%s/releases/latest' "${repo}"
+    download_url="https://github.com/${repo}/releases/latest/download/${asset}"
   else
-    printf 'https://api.github.com/repos/%s/releases/tags/%s' "${repo}" "${tag}"
+    download_url="https://github.com/${repo}/releases/download/${tag}/${asset}"
   fi
-}
-
-constructed_download_url() {
-  if [ "${tag}" = "latest" ]; then
-    printf 'https://github.com/%s/releases/latest/download/%s' "${repo}" "${asset}"
-  else
-    printf 'https://github.com/%s/releases/download/%s/%s' "${repo}" "${tag}" "${asset}"
-  fi
-}
-
-resolve_download_url() {
-  if [ -n "${download_url}" ]; then
-    return 0
-  fi
-
-  api="$(release_api_url)"
-  json="$(curl -fsSL "${api}" || true)"
-  if [ -n "${json}" ] && command -v python3 >/dev/null 2>&1; then
-    resolved="$(printf '%s' "${json}" | python3 -c '
-import json, sys
-want = sys.argv[1]
-rel = json.load(sys.stdin)
-print(rel.get("tag_name", ""))
-url = ""
-for asset in rel.get("assets") or []:
-    if asset.get("name") == want:
-        url = asset.get("browser_download_url") or ""
-        break
-print(url)
-' "${asset}" || true)"
-    resolved_tag="$(printf '%s\n' "${resolved}" | sed -n '1p')"
-    resolved_url="$(printf '%s\n' "${resolved}" | sed -n '2p')"
-    if [ -n "${resolved_tag}" ]; then
-      echo "Latest release ${resolved_tag} for ${os}/${arch}"
-    fi
-    if [ -n "${resolved_url}" ]; then
-      download_url="${resolved_url}"
-      return 0
-    fi
-    echo "Release ${resolved_tag:-${tag}} has no asset ${asset} for ${os}/${arch}" >&2
-    echo "Use: cargo install --git https://github.com/${repo} --bin neo-runner" >&2
-    exit 1
-  fi
-
-  download_url="$(constructed_download_url)"
-}
-
-resolve_download_url
+fi
 
 fetch() {
   src="$1"
@@ -245,12 +198,8 @@ PY
 
 install_claude_plugin() {
   # plugin@marketplace：右边是 marketplace.json 的 name，不是 GitHub 用户名。
-  # 本机第一次 add 时登记的名字不会随远程改名而变；老用户是 neo-runner。
   marketplace_name="neo-runner"
   plugin_id="neo-runner@neo-runner"
-  # 短窗口里 marketplace.json 曾改成 fzf54122，那批本机登记名不同。
-  legacy_marketplace_name="fzf54122"
-  legacy_plugin_id="neo-runner@fzf54122"
 
   if ! command -v claude >/dev/null 2>&1; then
     echo "claude CLI not found; wrote user skill only."
@@ -268,24 +217,17 @@ install_claude_plugin() {
   fi
 
   # add 在本机已有副本时是 no-op，必须再 update 才能拿到最新 marketplace.json。
-  # 已登记的 marketplace 名不会随远程改 name 而变，所以两种名字都试。
-  for name in "${marketplace_name}" "${legacy_marketplace_name}"; do
-    if claude plugin marketplace update "${name}"; then
-      :
-    else
-      echo "claude plugin marketplace update ${name} failed (continuing)." >&2
-    fi
-  done
+  if claude plugin marketplace update "${marketplace_name}"; then
+    :
+  else
+    echo "claude plugin marketplace update ${marketplace_name} failed (continuing)." >&2
+  fi
 
   # version 未变时 `plugin update` 会跳过，旧 cache 里重复声明的 hooks 清不掉。
-  for id in "${plugin_id}" "${legacy_plugin_id}"; do
-    claude plugin uninstall "${id}" --scope user -y >/dev/null 2>&1 || true
-  done
+  claude plugin uninstall "${plugin_id}" --scope user -y >/dev/null 2>&1 || true
 
   if claude plugin install "${plugin_id}" --scope user -y; then
     echo "Installed Claude plugin ${plugin_id} (user scope)."
-  elif claude plugin install "${legacy_plugin_id}" --scope user -y; then
-    echo "Installed Claude plugin ${legacy_plugin_id} (user scope, legacy marketplace name)."
   else
     echo "claude plugin install failed. In Claude Code run:" >&2
     echo "  /plugin marketplace add ${repo}" >&2
@@ -314,4 +256,4 @@ fi
 
 echo
 echo "Next: in a project, run: neo-runner init"
-echo "Then replace echo placeholders in .agents/loop.yaml."
+echo "init writes common gates from the repo root; edit .agents/loop.yaml or pass --preset if needed."
