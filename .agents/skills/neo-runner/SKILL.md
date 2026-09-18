@@ -15,7 +15,13 @@ Canonical skill for Codex / OpenCode / other `SKILL.md` hosts. Claude Code loads
 neo-runner run -f .agents/loop.yaml --output json
 ```
 
-If the loop file is missing, copy `examples/agent-loop.yaml` and replace the commands with this project's real gates.
+If the loop file is missing:
+
+```bash
+neo-runner init
+```
+
+Then replace the `echo` placeholders with this project's real gates.
 
 ## How to read the JSON
 

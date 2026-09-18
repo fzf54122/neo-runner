@@ -19,6 +19,17 @@ pub struct Args {
     pub command: Option<Command>,
 }
 
+#[derive(Debug, clap::Args)]
+pub struct InitArgs {
+    /// Overwrite existing loop/skill files.
+    #[arg(long)]
+    pub force: bool,
+
+    /// Also write project-level Claude and Codex SKILL.md files.
+    #[arg(long)]
+    pub skill: bool,
+}
+
 #[derive(Debug, Copy, Clone, ValueEnum, Eq, PartialEq)]
 pub enum OutputFormat {
     Text,
@@ -30,6 +41,8 @@ pub enum Command {
     Run,
     Plan,
     Validate,
+    /// Write .agents/loop.yaml in the current project. Does not install the binary.
+    Init(InitArgs),
     Completion {
         #[arg(value_enum)]
         shell: CompletionShell,

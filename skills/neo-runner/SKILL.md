@@ -23,13 +23,13 @@ curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/in
 neo-runner run -f .agents/loop.yaml --output json
 ```
 
-If `.agents/loop.yaml` does not exist, copy `examples/agent-loop.yaml` and replace the shell commands with this project's real gates (`cargo test`, `uv run pytest`, `pnpm test`, …).
-
-Fallback when the project has not adopted `.agents/loop.yaml` yet:
+If `.agents/loop.yaml` does not exist:
 
 ```bash
-neo-runner run -f examples/agent-loop.yaml --output json
+neo-runner init
 ```
+
+Then replace the `echo` placeholders with this project's real gates (`cargo test`, `uv run pytest`, `pnpm test`, …).
 
 ## How to read the JSON
 

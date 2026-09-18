@@ -312,3 +312,124 @@ job:
     let v = parse_json_line(&stdout);
     assert_eq!(v["ok"], true);
 }
+
+#[test]
+fn init_writes_loop_and_refuses_without_force() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let first = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
+        .args(["init", "--output", "json"])
+        .current_dir(dir.path())
+        .output()
+        .expect("init");
+    assert!(
+        first.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&first.stderr)
+    );
+    let v = parse_json_line(&String::from_utf8_lossy(&first.stdout));
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["written"][0], ".agents/loop.yaml");
+    let loop_path = dir.path().join(".agents/loop.yaml");
+    assert!(loop_path.is_file());
+    assert!(std::fs::read_to_string(&loop_path)
+        .expect("read loop")
+        .contains("echo fmt-ok"));
+
+    let second = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
+        .args(["init", "--output", "json"])
+        .current_dir(dir.path())
+        .output()
+        .expect("init again");
+    assert_eq!(second.status.code(), Some(1));
+    let v = parse_json_line(&String::from_utf8_lossy(&second.stdout));
+    assert_eq!(v["ok"], false);
+}
+
+#[test]
+fn init_force_and_skill() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    std::fs::create_dir_all(dir.path().join(".agents")).expect("agents");
+    std::fs::write(dir.path().join(".agents/loop.yaml"), "stale\n").expect("stale");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_neo-runner"))
+        .args(["init", "--force", "--skill", "--output", "json"])
+        .current_dir(dir.path())
+        .output()
+        .expect("init --force --skill");
+    assert!(output.status.success());
+    let v = parse_json_line(&String::from_utf8_lossy(&output.stdout));
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["written"].as_array().unwrap().len(), 3);
+    assert!(dir
+        .path()
+        .join(".claude/skills/neo-runner/SKILL.md")
+        .is_file());
+    assert!(dir
+        .path()
+        .join(".agents/skills/neo-runner/SKILL.md")
+        .is_file());
+    assert!(
+        std::fs::read_to_string(dir.path().join(".agents/loop.yaml"))
+            .expect("loop")
+            .contains("echo test-ok")
+    );
+}
+
+#[test]
+fn install_sh_binary_only_does_not_write_cwd_loop() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let prefix = dir.path().join("bin");
+    let home = dir.path().join("home");
+    std::fs::create_dir_all(&home).expect("home");
+
+    let dummy_dir = dir.path().join("dummy");
+    std::fs::create_dir_all(&dummy_dir).expect("dummy");
+    let dummy_bin = dummy_dir.join("neo-runner-linux-x86_64");
+    std::fs::write(&dummy_bin, "#!/bin/sh\necho neo-runner 0.2.0-test\n").expect("dummy bin");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&dummy_bin).expect("meta").permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&dummy_bin, perms).expect("chmod");
+    }
+
+    let tar_path = dir.path().join("neo-runner-linux-x86_64.tar.gz");
+    let tar_status = Command::new("tar")
+        .args([
+            "-czf",
+            tar_path.to_str().unwrap(),
+            "-C",
+            dummy_dir.to_str().unwrap(),
+            "neo-runner-linux-x86_64",
+        ])
+        .status()
+        .expect("tar");
+    assert!(tar_status.success());
+
+    let script = format!("{}/../../scripts/install.sh", env!("CARGO_MANIFEST_DIR"));
+    let output = Command::new("bash")
+        .arg(&script)
+        .current_dir(dir.path())
+        .env("HOME", &home)
+        .env("NEO_RUNNER_PREFIX", &prefix)
+        .env("NEO_RUNNER_SKIP_PLUGINS", "1")
+        .env("NEO_RUNNER_SKIP_PATH", "1")
+        .env("NEO_RUNNER_DOWNLOAD_URL", &tar_path)
+        .output()
+        .expect("install.sh");
+
+    assert!(
+        output.status.success(),
+        "stderr={} stdout={}",
+        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stdout)
+    );
+    assert!(prefix.join("neo-runner").is_file());
+    assert!(!dir.path().join(".agents/loop.yaml").exists());
+    let version = Command::new(prefix.join("neo-runner"))
+        .arg("--version")
+        .output()
+        .expect("version");
+    assert!(String::from_utf8_lossy(&version.stdout).contains("0.2.0-test"));
+}

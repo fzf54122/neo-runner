@@ -35,40 +35,28 @@ See [docs/agent-contract.md](docs/agent-contract.md) and [docs/harness.md](docs/
 
 ## ⚡ Install
 
-Users do not need a local clone. Binary, plugin, and loop template all come from GitHub.
-
-### Binary
-
-The release workflow publishes Linux and Windows artifacts. Download them; no clone needed:
+Users do not need a local clone. One command installs the binary and Claude / Codex plugins:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash
 neo-runner --version
 ```
 
-Or grab files from [GitHub Releases](https://github.com/fzf54122/neo-runner/releases/tag/v0.2.0):
+Then, in a project:
 
-- Linux: `neo-runner-linux-x86_64.tar.gz` (rename the binary to `neo-runner` and put it on `PATH`)
-- Debian/Ubuntu: `neo-runner_*_amd64.deb`
-- Windows: `neo-runner.exe` / `neo-runner-windows-x86_64.zip`
+```bash
+neo-runner init
+```
 
-If there is no prebuilt asset, or you want to compile:
+Replace `echo fmt-ok` / `echo test-ok` in `.agents/loop.yaml` with this project's real gates. If the file is missing, the hook skips.
+
+Binary only: set `NEO_RUNNER_SKIP_PLUGINS=1` before the curl. If there is no prebuilt asset:
 
 ```bash
 cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
 ```
 
-### Project loop file
-
-```bash
-mkdir -p .agents
-curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/examples/agent-loop.yaml \
-  -o .agents/loop.yaml
-```
-
-Replace `echo fmt-ok` / `echo test-ok` with this project's real gates (`cargo test`, `uv run pytest`, `pnpm test`, …).
-
-If `.agents/loop.yaml` is missing, the hook skips. It will not intercept ordinary projects.
+Manual downloads: [GitHub Releases](https://github.com/fzf54122/neo-runner/releases).
 
 Verify:
 
@@ -86,11 +74,11 @@ Three pieces, not MCP:
 | Skill | Tells the model which command to run and how to read JSON |
 | Stop hook | If the project has `.agents/loop.yaml`, force a rerun before the session ends; red blocks completion |
 
-In the Claude Code prompt:
+`install.sh` runs `claude plugin marketplace add fzf54122/neo-runner` and `claude plugin install fzf54122@neo-runner --scope user`. Without the `claude` CLI, type this in the session:
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install neo-runner
+/plugin install fzf54122@neo-runner
 ```
 
 Then tell Claude:

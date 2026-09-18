@@ -1,4 +1,5 @@
 mod cli;
+mod init;
 mod output;
 
 use clap::CommandFactory;
@@ -98,6 +99,11 @@ async fn main() {
                 }
             }
         }
+        cli::Command::Init(opts) => init::run(init::InitOptions {
+            force: opts.force,
+            skill: opts.skill,
+            format: output_format,
+        }),
         cli::Command::Completion { shell } => {
             let mut cmd = cli::Args::command();
             let bin_name = cmd.get_name().to_string();

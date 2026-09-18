@@ -23,7 +23,7 @@ elif [ -x "./target/release/neo-runner" ]; then
 elif [ -x "./target/debug/neo-runner" ]; then
   runner="./target/debug/neo-runner"
 else
-  echo "neo-runner: binary not found. Install with: cargo install --path crates/runner-cli --bin neo-runner" >&2
+  echo "neo-runner: binary not found. Install with: curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash" >&2
   echo "Loop file exists ($loop_file) so completion is blocked until the binary is available." >&2
   exit 1
 fi

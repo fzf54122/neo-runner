@@ -4,19 +4,24 @@
 
 官网：<https://fzf54122.github.io/neo-runner/>
 
-## 二进制
-
-Release 工作流会发布 Linux / Windows 附件，直接下载：
+## 一条命令
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash
 ```
 
-或打开 [Releases](https://github.com/fzf54122/neo-runner/releases/tag/v0.2.0) 取：
+这会：
 
-- `neo-runner-linux-x86_64.tar.gz`
-- `neo-runner_*_amd64.deb`
-- `neo-runner.exe`
+- 从 GitHub Releases 安装 `neo-runner` 到 `~/.local/bin`（可用 `NEO_RUNNER_PREFIX` 改）
+- 尽量把该目录写进 shell `PATH`
+- 本机有 `claude` CLI 时：`claude plugin marketplace add fzf54122/neo-runner`，再 `claude plugin install fzf54122@neo-runner --scope user`
+- 写入用户级 skill：`~/.claude/skills/neo-runner`、`~/.agents/skills/neo-runner`；有 Codex 时再写 `~/.codex/skills/neo-runner`
+
+只装二进制：
+
+```bash
+NEO_RUNNER_SKIP_PLUGINS=1 curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash
+```
 
 没有预编译包时：
 
@@ -32,37 +37,37 @@ neo-runner --version
 
 ## 项目循环文件
 
+全局安装不写当前目录。进仓库后：
+
 ```bash
-mkdir -p .agents
-curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/examples/agent-loop.yaml \
-  -o .agents/loop.yaml
+neo-runner init
 ```
 
-把命令换成这个项目的真实门禁。没有 `.agents/loop.yaml` 时 hook 会跳过。
+已存在 `.agents/loop.yaml` 时拒绝，除非 `--force`。把命令换成这个项目的真实门禁。没有该文件时 hook 会跳过。
+
+同时写项目级 skill：
+
+```bash
+neo-runner init --skill
+```
 
 ## Claude Code
 
+`install.sh` 优先走非交互 CLI。没有 `claude` 时，在对话框里输入：
+
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install neo-runner
+/plugin install fzf54122@neo-runner
 ```
 
-这会装上 `skills/neo-runner/SKILL.md` 和 Stop hook。项目里还要有 `.agents/loop.yaml`，否则 hook 会跳过。
-
-只给当前项目一份 skill、不走 marketplace 时：
-
-```bash
-mkdir -p .claude/skills/neo-runner
-curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/skills/neo-runner/SKILL.md \
-  -o .claude/skills/neo-runner/SKILL.md
-```
+Stop hook 只随 marketplace plugin 加载。仅有 `~/.claude/skills/` 兜底 skill 时没有 hook。
 
 ## Codex / OpenCode / 其它 SKILL.md 宿主
 
+用户级文件由 `install.sh` 写入。项目级：
+
 ```bash
-mkdir -p .agents/skills/neo-runner
-curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/.agents/skills/neo-runner/SKILL.md \
-  -o .agents/skills/neo-runner/SKILL.md
+neo-runner init --skill
 ```
 
 把 `neo-runner` 放进 `PATH` 即可。
@@ -75,4 +80,4 @@ DSH 把 skill 当插件说明书，执行仍走 CLI：
 neo-runner run -f .agents/loop.yaml --output json
 ```
 
-把 `skills/neo-runner/SKILL.md` 拷进当前 DSH 的 plugin/skill 目录。不要把 neo-runner 做成 MCP server，除非客户端没有 Bash。
+不要把 neo-runner 做成 MCP server，除非客户端没有 Bash。

@@ -22,15 +22,19 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - name: Stage site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Build Starlight
+        working-directory: site
         run: |
-          mkdir -p _site/assets
-          cp site/index.html _site/index.html
-          cp site/.nojekyll _site/.nojekyll
-          cp docs/assets/neo-runner-banner.svg _site/assets/neo-runner-banner.svg
+          npm ci
+          npm run build
+      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: site/dist
       - id: deployment
         uses: actions/deploy-pages@v4

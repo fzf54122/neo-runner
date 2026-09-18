@@ -4,11 +4,18 @@
 
 ## [Unreleased]
 
-- Claude plugin 不再在 `plugin.json` 里重复声明 `hooks/hooks.json`（该文件会自动加载）。
-- 官网改为 GitHub Actions 的 `deploy-pages` 正式部署。
+- Claude plugin 安装标识改为 `fzf54122@neo-runner`。
+- 官网按 turbo_sync 的 Vite + React 写法重做：终端优先落地页、一条安装命令、黑色终端演示；文档走 hash 路由，中英双语保留。
 
 ## [0.2.0] - 2026-09-17
 
+- `scripts/install.sh` 一条命令安装二进制、PATH、Claude plugin 与 Codex/用户级 skill；不写当前目录。
+- 新增 `neo-runner init`（`--force` / `--skill`），在项目里写入 `.agents/loop.yaml`。
+- 官网改为 Astro Starlight（中英），首页只突出一条安装命令。
+- Claude plugin 安装标识为 `neo-runner@fzf54122`。
+- Claude plugin 不再在 `plugin.json` 里重复声明 `hooks/hooks.json`（该文件会自动加载）。
+- 官网改为 GitHub Actions 的 `deploy-pages` 正式部署。
+- Release 工作流只在 `v*` tag 或手动触发时发布，不再对 `main` 上的 `feat:`/`fix:` 自动打预发布。
 - Agent 完工契约：`run --output json` 增加 `ok` / `failed_tasks` / `evidence` / `duration_ms`；任务失败退出码为 1，JSON 仍打到 stdout。
 - `fail_fast` 失败改为返回结构化 `RunResult`，不再丢证据。
 - shell 任务捕获 stderr/stdout 作为 `evidence.excerpt`（最长 2000 字符，保留尾部）。

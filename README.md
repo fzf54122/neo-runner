@@ -35,40 +35,28 @@
 
 ## ⚡ 安装
 
-用户不需要这份仓库的本地代码。二进制、plugin、循环模板都从 GitHub 取。
-
-### 二进制
-
-Release 工作流会打出 Linux / Windows 附件，直接下载即可，不必克隆仓库：
+用户不需要这份仓库的本地代码。一条命令装好二进制和 Claude / Codex 插件：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash
 neo-runner --version
 ```
 
-或手动取 [GitHub Releases](https://github.com/fzf54122/neo-runner/releases/tag/v0.2.0) 里的文件：
+进具体仓库后再写循环文件：
 
-- Linux：`neo-runner-linux-x86_64.tar.gz`（解压后改名为 `neo-runner` 放进 `PATH`）
-- Debian/Ubuntu：`neo-runner_*_amd64.deb`
-- Windows：`neo-runner.exe` / `neo-runner-windows-x86_64.zip`
+```bash
+neo-runner init
+```
 
-没有预编译包、或要自己编时：
+把 `.agents/loop.yaml` 里的 `echo fmt-ok` / `echo test-ok` 换成这个项目真正的门禁。没有该文件时 hook 会 skip。
+
+只装二进制：`NEO_RUNNER_SKIP_PLUGINS=1` 再跑上面的 `curl | bash`。没有预编译包时：
 
 ```bash
 cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
 ```
 
-### 项目循环文件
-
-```bash
-mkdir -p .agents
-curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/examples/agent-loop.yaml \
-  -o .agents/loop.yaml
-```
-
-把里面的 `echo fmt-ok` / `echo test-ok` 换成这个项目真正的门禁，例如 `cargo test`、`uv run pytest`、`pnpm test`。
-
-没有 `.agents/loop.yaml` 时 hook 会 skip，不会误拦普通项目。
+手动取附件见 [GitHub Releases](https://github.com/fzf54122/neo-runner/releases)。
 
 确认：
 
@@ -86,11 +74,11 @@ neo-runner run -f .agents/loop.yaml --output json
 | Skill | 告诉模型完工前必须跑哪条命令、怎么读 JSON |
 | Stop hook | 项目里有 `.agents/loop.yaml` 时，会话结束前强制再跑一遍；红灯就拦 |
 
-在 Claude Code 对话框里输入：
+`install.sh` 会调用 `claude plugin marketplace add fzf54122/neo-runner` 和 `claude plugin install fzf54122@neo-runner --scope user`。没有 `claude` CLI 时，在对话框里输入：
 
 ```text
 /plugin marketplace add fzf54122/neo-runner
-/plugin install neo-runner
+/plugin install fzf54122@neo-runner
 ```
 
 然后对 Claude 说：
