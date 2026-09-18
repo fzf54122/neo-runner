@@ -1,0 +1,19 @@
+# Python completion loop. Copy to .agents/loop.yaml or use: neo-runner init --preset python
+# neo-runner run -f .agents/loop.yaml --output json
+# The test command is filled by init (uv run pytest when uv.lock exists).
+# Edit this file to match the project's Definition of Done.
+version: 1
+job:
+  name: agent-loop
+  fail_fast: true
+  max_concurrency: 1
+  default_timeout: 120s
+  tasks:
+    - id: test
+      type: shell
+      cmd: "{pytest_cmd}"
+
+    # - id: lint
+    #   type: shell
+    #   depends_on: [test]
+    #   cmd: "ruff check ."

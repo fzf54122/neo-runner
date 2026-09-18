@@ -31,7 +31,7 @@ Agent 只应依赖这些字段：
 
 ## 循环文件
 
-项目把 Definition of Done 写在 `.agents/loop.yaml`。用 `neo-runner init` 从模板写入（模板也在 `examples/agent-loop.yaml`）。
+项目把 Definition of Done 写在 `.agents/loop.yaml`。`neo-runner init` 按仓库根文件写入常见门禁（`--preset` 可覆盖）。generic 模板在 `examples/agent-loop.yaml`，各语言模板在 `examples/loop-*.yaml`。不够就直接改项目 YAML。
 
 ## Hook
 

@@ -102,6 +102,7 @@ async fn main() {
         cli::Command::Init(opts) => init::run(init::InitOptions {
             force: opts.force,
             skill: opts.skill,
+            preset: opts.preset,
             format: output_format,
         }),
         cli::Command::Completion { shell } => {

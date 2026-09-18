@@ -48,7 +48,7 @@ neo-runner --version
 neo-runner init
 ```
 
-把 `.agents/loop.yaml` 里的 `echo fmt-ok` / `echo test-ok` 换成这个项目真正的门禁。没有该文件时 hook 会 skip。
+`init` 会按仓库根文件写入常见门禁（`Cargo.toml` → rust，`go.mod` → go，`pyproject.toml`/`uv.lock` → python，`package.json` → node）。可用 `--preset rust|go|python|node|generic` 覆盖。不够就直接改 `.agents/loop.yaml`。没有该文件时 hook 会 skip。
 
 只装二进制：`NEO_RUNNER_SKIP_PLUGINS=1` 再跑上面的 `curl | bash`。没有预编译包时：
 

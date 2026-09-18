@@ -1,7 +1,8 @@
-# Agent completion loop. Copy to .agents/loop.yaml and replace the
-# commands with the project's real fmt/test/lint gates.
+# Generic / unknown-stack completion loop. Used when init cannot
+# detect Cargo.toml, go.mod, pyproject.toml, or package.json.
 # neo-runner run -f .agents/loop.yaml --output json
 # Exit 0 and ok:true are the only "done" signals an agent may trust.
+# Edit this file to match the project's Definition of Done.
 version: 1
 job:
   name: agent-loop

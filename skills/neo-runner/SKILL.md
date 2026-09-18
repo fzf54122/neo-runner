@@ -29,7 +29,7 @@ If `.agents/loop.yaml` does not exist:
 neo-runner init
 ```
 
-Then replace the `echo` placeholders with this project's real gates (`cargo test`, `uv run pytest`, `pnpm test`, …).
+`init` writes common gates from root markers (`Cargo.toml`, `go.mod`, `pyproject.toml`/`uv.lock`, `package.json`). Override with `--preset rust|go|python|node|generic`. Edit `.agents/loop.yaml` if the gates are not this project's Definition of Done.
 
 ## How to read the JSON
 

@@ -1,0 +1,23 @@
+# Rust completion loop. Copy to .agents/loop.yaml or use: neo-runner init --preset rust
+# neo-runner run -f .agents/loop.yaml --output json
+# Edit this file to match the project's Definition of Done.
+version: 1
+job:
+  name: agent-loop
+  fail_fast: true
+  max_concurrency: 1
+  default_timeout: 180s
+  tasks:
+    - id: fmt
+      type: shell
+      cmd: "cargo fmt --all -- --check"
+
+    - id: test
+      type: shell
+      depends_on: [fmt]
+      cmd: "cargo test --workspace"
+
+    # - id: clippy
+    #   type: shell
+    #   depends_on: [test]
+    #   cmd: "cargo clippy --workspace --all-targets -- -D warnings"

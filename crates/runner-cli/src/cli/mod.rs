@@ -28,6 +28,32 @@ pub struct InitArgs {
     /// Also write project-level Claude and Codex SKILL.md files.
     #[arg(long)]
     pub skill: bool,
+
+    /// Loop preset. Auto-detected from the project root when omitted.
+    #[arg(long, value_enum)]
+    pub preset: Option<InitPreset>,
+}
+
+#[derive(Debug, Copy, Clone, ValueEnum, Eq, PartialEq)]
+#[value(rename_all = "kebab-case")]
+pub enum InitPreset {
+    Generic,
+    Rust,
+    Go,
+    Python,
+    Node,
+}
+
+impl InitPreset {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            InitPreset::Generic => "generic",
+            InitPreset::Rust => "rust",
+            InitPreset::Go => "go",
+            InitPreset::Python => "python",
+            InitPreset::Node => "node",
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, ValueEnum, Eq, PartialEq)]

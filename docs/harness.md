@@ -58,7 +58,7 @@ curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/un
 neo-runner init
 ```
 
-已存在 `.agents/loop.yaml` 时拒绝，除非 `--force`。把命令换成这个项目的真实门禁。没有该文件时 hook 会跳过。
+已存在 `.agents/loop.yaml` 时拒绝，除非 `--force`。`init` 按仓库根文件写入常见门禁，也可用 `--preset rust|go|python|node|generic` 覆盖。不够就改 YAML。没有该文件时 hook 会跳过。
 
 同时写项目级 skill：
 

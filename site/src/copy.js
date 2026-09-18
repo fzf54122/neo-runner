@@ -68,7 +68,7 @@ export const copy = {
     installs: [
       { title: 'curl', desc: '推荐。从 GitHub Releases 装二进制，并尽量写入 PATH。' },
       { title: 'cargo', desc: '没有预编译包时，从源码安装指定 tag。' },
-      { title: 'init', desc: '进仓库后写入 .agents/loop.yaml。没有该文件时 hook 会 skip。' },
+      { title: 'init', desc: '进仓库后按根文件写入常见 .agents/loop.yaml。没有该文件时 hook 会 skip。' },
     ],
   },
   en: {
@@ -124,7 +124,7 @@ export const copy = {
     installs: [
       { title: 'curl', desc: 'Recommended. Installs the GitHub Releases binary and tries to update PATH.' },
       { title: 'cargo', desc: 'Fallback when no prebuilt package exists. Pins a release tag.' },
-      { title: 'init', desc: 'Writes .agents/loop.yaml in the repo. The hook skips if that file is missing.' },
+      { title: 'init', desc: 'Writes common .agents/loop.yaml gates from root markers. The hook skips if that file is missing.' },
     ],
   },
 }
@@ -163,7 +163,7 @@ neo-runner --version
 ${INIT_CMD}
 \`\`\`
 
-把 \`.agents/loop.yaml\` 里的占位命令换成这个项目真正的门禁。没有该文件时 hook 会 skip。
+\`init\` 会按仓库根文件写入常见门禁，可用 \`--preset\` 覆盖。不够就直接改 \`.agents/loop.yaml\`。没有该文件时 hook 会 skip。
 
 只装二进制：
 
@@ -225,7 +225,7 @@ Agent 只应依赖这些字段：
 
 ## 循环文件
 
-项目把 Definition of Done 写在 \`.agents/loop.yaml\`。用 \`neo-runner init\` 从模板写入。
+项目把 Definition of Done 写在 \`.agents/loop.yaml\`。\`neo-runner init\` 按根文件写入常见门禁，\`--preset\` 可覆盖。不够就直接改 YAML。
 
 ## Hook
 
@@ -273,7 +273,7 @@ ${UNINSTALL_CMD}
 ${INIT_CMD}
 \`\`\`
 
-已存在 \`.agents/loop.yaml\` 时拒绝，除非 \`--force\`。同时写项目级 skill：
+已存在 \`.agents/loop.yaml\` 时拒绝，除非 \`--force\`。\`init\` 按根文件写入常见门禁，也可用 \`--preset\` 覆盖。同时写项目级 skill：
 
 \`\`\`bash
 neo-runner init --skill
@@ -315,7 +315,7 @@ Write the loop file inside the target repo:
 ${INIT_CMD}
 \`\`\`
 
-Replace the placeholder commands in \`.agents/loop.yaml\` with the real gates. The hook skips if that file is missing.
+\`init\` writes common gates from root markers. Override with \`--preset\`. Edit \`.agents/loop.yaml\` if the gates are wrong. The hook skips if that file is missing.
 
 Binary only:
 
@@ -377,7 +377,7 @@ Agents should depend only on:
 
 ## Loop file
 
-Definition of Done lives in \`.agents/loop.yaml\`. Write it with \`neo-runner init\`.
+Definition of Done lives in \`.agents/loop.yaml\`. \`neo-runner init\` writes common gates from root markers; override with \`--preset\`. Edit the YAML if the gates are wrong.
 
 ## Hook
 
@@ -425,7 +425,7 @@ Global install does not write the current directory. In the repo:
 ${INIT_CMD}
 \`\`\`
 
-Existing \`.agents/loop.yaml\` is refused unless \`--force\`. Project-level skill:
+Existing \`.agents/loop.yaml\` is refused unless \`--force\`. \`init\` writes common gates from root markers; override with \`--preset\`. Project-level skill:
 
 \`\`\`bash
 neo-runner init --skill

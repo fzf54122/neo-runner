@@ -1,0 +1,19 @@
+# Node completion loop. Copy to .agents/loop.yaml or use: neo-runner init --preset node
+# neo-runner run -f .agents/loop.yaml --output json
+# The package manager is filled by init from the root lockfile (pnpm / yarn / bun / npm).
+# Edit this file to match the project's Definition of Done.
+version: 1
+job:
+  name: agent-loop
+  fail_fast: true
+  max_concurrency: 1
+  default_timeout: 120s
+  tasks:
+    - id: test
+      type: shell
+      cmd: "{pm} test"
+
+    # - id: lint
+    #   type: shell
+    #   depends_on: [test]
+    #   cmd: "{pm} run lint"

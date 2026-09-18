@@ -48,7 +48,7 @@ Then, in a project:
 neo-runner init
 ```
 
-Replace `echo fmt-ok` / `echo test-ok` in `.agents/loop.yaml` with this project's real gates. If the file is missing, the hook skips.
+`init` writes common gates from root markers (`Cargo.toml` → rust, `go.mod` → go, `pyproject.toml`/`uv.lock` → python, `package.json` → node). Override with `--preset rust|go|python|node|generic`. Edit `.agents/loop.yaml` if the gates are wrong. If the file is missing, the hook skips.
 
 Binary only: set `NEO_RUNNER_SKIP_PLUGINS=1` before the curl. If there is no prebuilt asset:
 
