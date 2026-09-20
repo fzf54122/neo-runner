@@ -11,7 +11,7 @@ export const UNINSTALL_CMD =
 export const RUN_CMD = 'neo-runner run -f .agents/loop.yaml --output json'
 export const INIT_CMD = 'neo-runner init'
 export const CARGO_CMD =
-  'cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner'
+  'cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.1 --bin neo-runner'
 export const SKIP_PLUGINS_CMD = `NEO_RUNNER_SKIP_PLUGINS=1 ${INSTALL_CMD}`
 
 export const copy = {
@@ -43,7 +43,7 @@ export const copy = {
     copyLabel: '复制',
     copiedLabel: '已复制',
     starLabel: 'Star',
-    versionLabel: 'v0.2.0',
+    versionLabel: 'v0.2.1',
     traits: [
       { title: 'Fast', desc: 'Rust 二进制。DAG、重试、超时、并发都在本机跑完。' },
       { title: 'Simple', desc: 'YAML 写循环，JSON 给证据。退出码 0 才是绿灯。' },
@@ -99,7 +99,7 @@ export const copy = {
     copyLabel: 'Copy',
     copiedLabel: 'Copied',
     starLabel: 'Star',
-    versionLabel: 'v0.2.0',
+    versionLabel: 'v0.2.1',
     traits: [
       { title: 'Fast', desc: 'A Rust binary. DAG, retries, timeouts, and concurrency stay local.' },
       { title: 'Simple', desc: 'YAML describes the loop. JSON is the evidence. Exit 0 is the only green light.' },
@@ -471,7 +471,7 @@ export const jsonSample = `{
 
 export const terminalLines = [
   { kind: 'cmd', text: `$ ${RUN_CMD}` },
-  { kind: 'meta', text: 'neo-runner v0.2.0' },
+  { kind: 'meta', text: 'neo-runner v0.2.1' },
   { kind: 'ok', text: '✓ Loading configuration' },
   { kind: 'ok', text: '✓ Resolving dependencies' },
   { kind: 'ok', text: '✓ Running tasks' },

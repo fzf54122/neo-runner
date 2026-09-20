@@ -21,7 +21,7 @@ If the loop file is missing:
 neo-runner init
 ```
 
-Then replace the `echo` placeholders with this project's real gates.
+`init` writes common gates from root markers. Override with `--preset rust|go|python|node|generic`. Edit `.agents/loop.yaml` if the gates are not this project's Definition of Done.
 
 ## How to read the JSON
 

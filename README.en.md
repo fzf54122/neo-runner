@@ -53,7 +53,7 @@ neo-runner init
 Binary only: set `NEO_RUNNER_SKIP_PLUGINS=1` before the curl. If there is no prebuilt asset:
 
 ```bash
-cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
+cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.1 --bin neo-runner
 ```
 
 Manual downloads: [GitHub Releases](https://github.com/fzf54122/neo-runner/releases).

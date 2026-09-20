@@ -53,7 +53,7 @@ neo-runner init
 只装二进制：`NEO_RUNNER_SKIP_PLUGINS=1` 再跑上面的 `curl | bash`。没有预编译包时：
 
 ```bash
-cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
+cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.1 --bin neo-runner
 ```
 
 手动取附件见 [GitHub Releases](https://github.com/fzf54122/neo-runner/releases)。

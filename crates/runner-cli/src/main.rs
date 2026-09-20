@@ -36,7 +36,7 @@ async fn main() {
     let output_format = args.output;
 
     if args.version {
-        println!("neo-runner 0.2.0");
+        println!("neo-runner {}", env!("CARGO_PKG_VERSION"));
         return;
     }
 

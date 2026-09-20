@@ -26,7 +26,7 @@ NEO_RUNNER_SKIP_PLUGINS=1 curl -fsSL https://raw.githubusercontent.com/fzf54122/
 没有预编译包时：
 
 ```bash
-cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
+cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.1 --bin neo-runner
 ```
 
 确认：

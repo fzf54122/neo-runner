@@ -14,7 +14,7 @@ If `neo-runner` is missing:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/fzf54122/neo-runner/main/scripts/install.sh | bash
 # fallback:
-# cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.0 --bin neo-runner
+# cargo install --git https://github.com/fzf54122/neo-runner --tag v0.2.1 --bin neo-runner
 ```
 
 ## Default command
